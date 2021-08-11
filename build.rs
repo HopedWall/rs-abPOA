@@ -8,9 +8,6 @@ fn main() {
     //Example command to compile .c
     //gcc -g example.c -I ./include -L ./lib -labpoa -lz -o example
 
-    // Tell cargo to tell rustc to link the system bzip2
-    // shared library.
-
     // include abpoa (-L ./lib -labpoa)
     println!("cargo:rustc-link-search=./abpoa-lib");
     println!("cargo:rustc-link-lib=abpoa");
