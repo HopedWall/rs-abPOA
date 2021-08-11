@@ -1,6 +1,4 @@
-mod abpoa;
-
-use abpoa::*;
+use rs_abPOA::abpoa::*;
 
 fn main() {}
 
