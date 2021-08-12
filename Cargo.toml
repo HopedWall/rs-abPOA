@@ -1,5 +1,5 @@
 [package]
-name = "rs-abPOA"
+name = "ab_POA"
 version = "0.1.0"
 authors = ["Francesco Porto <francesco.porto97@gmail.com>"]
 edition = "2018"
