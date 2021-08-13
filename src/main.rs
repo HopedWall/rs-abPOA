@@ -1,4 +1,4 @@
-use ab_POA::abpoa::*;
+use ab_poa::abpoa::*;
 use std::ptr::null;
 
 fn main() {}
