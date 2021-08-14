@@ -14,7 +14,7 @@ mod tests {
     #[test]
     fn test() {
         unsafe {
-            let ab_poa = abpoa_init();
+            let ab = abpoa_init();
             let mut abpt = abpoa_init_para();
 
             (*abpt).set_out_msa(1);
@@ -24,9 +24,11 @@ mod tests {
             (*abpt).min_w = 10;
             (*abpt).set_progressive_poa(1);
 
+            //println!("abpt: {:#?}", *abpt);
+
             abpoa_post_set_para(abpt);
 
-            let seqs: [&str; 10] = [
+            let seqs: Vec<&str> = [
                 "CGTCAATCTATCGAAGCATACGCGGGCAGAGCCGAAGACCTCGGCAATCCA",
                 "CCACGTCAATCTATCGAAGCATACGCGGCAGCCGAACTCGACCTCGGCAATCAC",
                 "CGTCAATCTATCGAAGCATACGCGGCAGAGCCCGGAAGACCTCGGCAATCAC",
@@ -37,46 +39,26 @@ mod tests {
                 "CGTCAATCTATCTTCAAGCATACGCGGCAGAGCCGAAGACCTCGGCAATC",
                 "CGTCAATGGATCGAGTACGCGGCAGAGCCGAAGACCTCGGCAATCAC",
                 "CGTCAATCTAATCGAAGCATACGCGGCAGAGCCGTCTACCTCGGCAATCACGT"
-            ];
+            ].to_vec();
 
-            let _char256_table : [char; 256] = [
-                'A', 'C', 'G', 'T',  'N', 'B', 'D', 'E',  'F', 'H', 'I',  'J', 'K', 'L', 'M', 'O',
-                'P', 'Q', 'R', 'S',  'U', 'V', 'W', 'X',  'Y', 'Z', '*', '-',  '*', '*', '*', '*',
-                '*', '*', '*', '*',  '*', '*', '*', '*',  '*', '*', '*', '*',  '*', '*', '*', '*',
-                '*', '*', '*', '*',  '*', '*', '*', '*',  '*', '*', '*', '*',  '*', '*', '*', '*',
-                '*', 'A', 'B', 'C',  'D', 'E', 'F', 'G',  'H', 'I', 'J', 'K',  'L', 'M', 'N', 'O',
-                'P', 'Q', 'R', 'S',  'T', 'U', 'V', 'W',  'X', 'Y', 'Z', '*',  '*', '*', '*', '*',
-                '*', 'A', 'B', 'C',  'D', 'E', 'F', 'G',  'H', 'I', 'J', 'K',  'L', 'M', 'N', 'O',
-                'P', 'Q', 'R', 'S',  'T', 'U', 'V', 'W',  'X', 'Y', 'Z', '*',  '*', '*', '*', '*',
-                '*', '*', '*', '*',  '*', '*', '*', '*',  '*', '*', '*', '*',  '*', '*', '*', '*',
-                '*', '*', '*', '*',  '*', '*', '*', '*',  '*', '*', '*', '*',  '*', '*', '*', '*',
-                '*', '*', '*', '*',  '*', '*', '*', '*',  '*', '*', '*', '*',  '*', '*', '*', '*',
-                '*', '*', '*', '*',  '*', '*', '*', '*',  '*', '*', '*', '*',  '*', '*', '*', '*',
-                '*', '*', '*', '*',  '*', '*', '*', '*',  '*', '*', '*', '*',  '*', '*', '*', '*',
-                '*', '*', '*', '*',  '*', '*', '*', '*',  '*', '*', '*', '*',  '*', '*', '*', '*',
-                '*', '*', '*', '*',  '*', '*', '*', '*',  '*', '*', '*', '*',  '*', '*', '*', '*',
-                '*', '*', '*', '*',  '*', '*', '*', '*',  '*', '*', '*', '*',  '*', '*', '*', '*'
+            let _nt4_table : [u8; 256] = [
+                4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+                4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+                4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 5 /*'-'*/, 4, 4,
+                4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+                4, 0, 4, 1,  4, 4, 4, 2,  4, 4, 4, 4,  4, 4, 4, 4,
+                4, 4, 4, 4,  3, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+                4, 0, 4, 1,  4, 4, 4, 2,  4, 4, 4, 4,  4, 4, 4, 4,
+                4, 4, 4, 4,  3, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+                4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+                4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+                4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+                4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+                4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+                4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+                4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+                4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4
             ];
-
-             let _char26_table: [u8; 256] = [
-                0,  1,  2,  3,   4,  5,  6,  7,   8,  9, 10, 11,  12, 13, 14, 15,
-                16, 17, 18, 19,  20, 21, 22, 23,  24, 25, 26, 26,  26, 26, 26, 26,
-                26, 26, 26, 26,  26, 26, 26, 26,  26, 26, 26, 26,  26, 26, 26, 26,
-                26, 26, 26, 26,  26, 26, 26, 26,  26, 26, 26, 26,  26, 26, 26, 26,
-                26,  0,  5,  1,   6,  7,  8,  2,   9, 10, 11, 12,  13, 14,  4, 15,
-                16, 17, 18, 19,   3, 20, 21, 22,  23, 24, 25, 26,  26, 26, 26, 26,
-                26,  0,  5,  1,   6,  7,  8,  2,   9, 10, 11, 12,  13, 14,  4, 15,
-                16, 17, 18, 19,   3, 20, 21, 22,  23, 24, 25, 26,  26, 26, 26, 26,
-                26, 26, 26, 26,  26, 26, 26, 26,  26, 26, 26, 26,  26, 26, 26, 26,
-                26, 26, 26, 26,  26, 26, 26, 26,  26, 26, 26, 26,  26, 26, 26, 26,
-                26, 26, 26, 26,  26, 26, 26, 26,  26, 26, 26, 26,  26, 26, 26, 26,
-                26, 26, 26, 26,  26, 26, 26, 26,  26, 26, 26, 26,  26, 26, 26, 26,
-                26, 26, 26, 26,  26, 26, 26, 26,  26, 26, 26, 26,  26, 26, 26, 26,
-                26, 26, 26, 26,  26, 26, 26, 26,  26, 26, 26, 26,  26, 26, 26, 26,
-                26, 26, 26, 26,  26, 26, 26, 26,  26, 26, 26, 26,  26, 26, 26, 26,
-                26, 26, 26, 26,  26, 26, 26, 26,  26, 26, 26, 26,  26, 26, 26, 26
-            ];
-
 
             // c_int is an alias for i32
             let n_seqs: c_int = 10;
@@ -88,50 +70,61 @@ mod tests {
             //let bseqs: *mut *mut u8 = malloc((mem::size_of::<u8>() * n_seqs as usize) as u64) as *mut *mut u8;
             let mut bseqs_val: [* mut u8; 10] = [ptr::null_mut();10];
             let bseqs = bseqs_val.as_mut_ptr();
-            //println!("Bseqs initial: {:#?}", bseqs_val);
             for i in 0..n_seqs {
+                let curr_seq : &str = seqs.get(i as usize).unwrap();
                 //seq_lens[i] = &strlen(seqs[i]);
                 let mut curr_seq_len : &mut c_int = seq_lens_val.get_mut(i as usize).unwrap();
-                *curr_seq_len = seqs.get(i as usize).unwrap().len() as c_int;
+                *curr_seq_len = curr_seq.len() as c_int;
                 //bseqs[i] = malloc(u8::size_of() * seq_lens[i]);
-                let mut curr_numbers : Vec<u8> = Vec::new();
-                for j in 0..*curr_seq_len {
-                    curr_numbers.push(*_char26_table.get((i*16+j) as usize).unwrap());
+                //println!("Curr seq: {:#?}", curr_seq);
+                //let curr_seq_as_chars = curr_seq.chars();
+                //println!("Chars: {:#?}\n", curr_seq_as_chars);
+                let mut curr_numbers : Vec<u8> = curr_seq.chars()
+                                                .map(|c| *(_nt4_table).get(c as usize).unwrap())
+                                                .collect();
+                //println!("Curr numbers: {:#?}", curr_numbers);
+                /*
+                for char in curr_seq_as_chars {
+                    println!("Char {} is as usize: {} value matrix: {} (as u8: {})", char, char as usize, *(_nt4_table).get(char as usize).unwrap(), *(_nt4_table).get(char as usize).unwrap() as u8);
                 }
+                 */
+
                 let mut curr_bseq_val = bseqs_val.get_mut(i as usize).unwrap();
-                //println!("curr_bseq_val before: {:#?}", *curr_bseq_val);
                 *curr_bseq_val = curr_numbers.as_mut_ptr();
-                //println!("curr_bseq_val after: {:#?}", *curr_bseq_val);
-                //println!("Curr_numbers {} is: {:#?}", i, **curr_bseq_val);
-                //for j in 0..*curr_seq_len {
-                //    println!("Curr_numbers {} is: {:#?}", i, *(curr_bseq_val.add(j as usize)));
-                //}
             }
 
-            println!("ab_poa: {:#?}", ab_poa);
+            /*
+            println!("ab: {:#?}", ab);
             println!("abpt: {:#?}", abpt);
             println!("Seq lens: {:#?}", seq_lens_val);
             for i in 0..n_seqs {
                 let mut curr_bseq_val = bseqs_val.get_mut(i as usize).unwrap();
 
-                for j in 0..*seq_lens_val.get(i as usize).unwrap() {
+                let curr_seq_lens = *seq_lens_val.get(i as usize).unwrap();
+                println!("Curr seq lens: {}", curr_seq_lens);
+                for j in 0..curr_seq_lens {
                     println!("Bseq [{}][{}]: {:#?}", i, j, *(curr_bseq_val.add(j as usize)));
                 }
 
                 println!("");
             }
 
+
+            abpoa_msa(ab, abpt, n_seqs, ptr::null_mut(), seq_lens, bseqs, stdout,
+                      ptr::null_mut(), ptr::null_mut(), ptr::null_mut(),
+                      ptr::null_mut(), ptr::null_mut(), ptr::null_mut());
+            */
+
+            /*
             let cons_seq: *mut *mut *mut u8 = ptr::null_mut();
             let cons_cov: *mut *mut *mut c_int = ptr::null_mut();
             let cons_l : *mut *mut c_int = ptr::null_mut();
-            let cons_n: *mut c_int = ptr::null_mut();
+            let cons_n: *mut c_int = &mut 0;
             let msa_seq: *mut *mut *mut u8 = ptr::null_mut();
-            let msa_l : *mut c_int = ptr::null_mut();
+            let msa_l : *mut c_int = &mut 0;
 
-            //abpoa_msa(ab_poa, abpt, 10, ptr::null_mut(), seq_lens, bseqs, ptr::null_mut(), cons_seq, cons_cov, cons_l, cons_n, msa_seq, msa_l);
+            abpoa_msa(ab_poa, abpt, 10, ptr::null_mut(), seq_lens, bseqs, ptr::null_mut(), cons_seq, cons_cov, cons_l, cons_n, msa_seq, msa_l);
 
-            //let msa_seq_val = msa_seq;
-            /*
             println!(">Multiple_sequence_alignment");
             for i in 0..n_seqs {
                 print!("ACGTN-");
