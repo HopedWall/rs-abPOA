@@ -68,7 +68,17 @@ mod tests {
             let seq_lens: *mut c_int  = seq_lens_val.as_mut_ptr();
 
             //let bseqs: *mut *mut u8 = malloc((mem::size_of::<u8>() * n_seqs as usize) as u64) as *mut *mut u8;
+            let mut bseqs_val_val : Vec<Vec<u8>> = Vec::new();
+            for i in 0..n_seqs {
+                bseqs_val_val.push(Vec::new());
+            }
             let mut bseqs_val: [* mut u8; 10] = [ptr::null_mut();10];
+
+            for i in 0..bseqs_val.len() {
+                let mut bval = bseqs_val.get_mut(i).unwrap();
+                *bval = bseqs_val_val.get_mut(i as usize).unwrap().as_mut_ptr();
+            }
+
             let bseqs = bseqs_val.as_mut_ptr();
             for i in 0..n_seqs {
                 let curr_seq : &str = seqs.get(i as usize).unwrap();
@@ -89,8 +99,10 @@ mod tests {
                 }
                  */
 
-                let mut curr_bseq_val = bseqs_val.get_mut(i as usize).unwrap();
-                *curr_bseq_val = curr_numbers.as_mut_ptr();
+                //let mut curr_bseq_val = bseqs_val.get_mut(i as usize).unwrap();
+                //*curr_bseq_val = curr_numbers.as_mut_ptr();
+                let mut bval : &mut Vec<u8> = bseqs_val_val.get_mut(i as usize).unwrap();
+                *bval = curr_numbers;
             }
 
             /*
@@ -109,13 +121,13 @@ mod tests {
                 println!("");
             }
 
+             */
 
+            /*
             abpoa_msa(ab, abpt, n_seqs, ptr::null_mut(), seq_lens, bseqs, stdout,
                       ptr::null_mut(), ptr::null_mut(), ptr::null_mut(),
                       ptr::null_mut(), ptr::null_mut(), ptr::null_mut());
-            */
 
-            /*
             let cons_seq: *mut *mut *mut u8 = ptr::null_mut();
             let cons_cov: *mut *mut *mut c_int = ptr::null_mut();
             let cons_l : *mut *mut c_int = ptr::null_mut();
