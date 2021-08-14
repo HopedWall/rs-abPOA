@@ -9,6 +9,7 @@ mod tests {
     use std::{mem, io, ptr};
     use std::os::raw::{c_int, c_char};
     use std::alloc::alloc;
+    use std::ops::Deref;
 
     #[test]
     fn test() {
@@ -81,11 +82,13 @@ mod tests {
             let n_seqs: c_int = 10;
             //let seq_lens: *mut c_int  = malloc((mem::size_of::<i32>() * n_seqs as usize) as u64) as *mut c_int;
             let mut seq_lens_val : [c_int; 10] = [0; 10];
+
             let seq_lens: *mut c_int  = seq_lens_val.as_mut_ptr();
 
             //let bseqs: *mut *mut u8 = malloc((mem::size_of::<u8>() * n_seqs as usize) as u64) as *mut *mut u8;
             let mut bseqs_val: [* mut u8; 10] = [ptr::null_mut();10];
             let bseqs = bseqs_val.as_mut_ptr();
+            //println!("Bseqs initial: {:#?}", bseqs_val);
             for i in 0..n_seqs {
                 //seq_lens[i] = &strlen(seqs[i]);
                 let mut curr_seq_len : &mut c_int = seq_lens_val.get_mut(i as usize).unwrap();
@@ -95,9 +98,28 @@ mod tests {
                 for j in 0..*curr_seq_len {
                     curr_numbers.push(*_char26_table.get((i*16+j) as usize).unwrap());
                 }
+                let mut curr_bseq_val = bseqs_val.get_mut(i as usize).unwrap();
+                //println!("curr_bseq_val before: {:#?}", *curr_bseq_val);
+                *curr_bseq_val = curr_numbers.as_mut_ptr();
+                //println!("curr_bseq_val after: {:#?}", *curr_bseq_val);
+                //println!("Curr_numbers {} is: {:#?}", i, **curr_bseq_val);
+                //for j in 0..*curr_seq_len {
+                //    println!("Curr_numbers {} is: {:#?}", i, *(curr_bseq_val.add(j as usize)));
+                //}
             }
-            
+
+            println!("ab_poa: {:#?}", ab_poa);
+            println!("abpt: {:#?}", abpt);
             println!("Seq lens: {:#?}", seq_lens_val);
+            for i in 0..n_seqs {
+                let mut curr_bseq_val = bseqs_val.get_mut(i as usize).unwrap();
+
+                for j in 0..*seq_lens_val.get(i as usize).unwrap() {
+                    println!("Bseq [{}][{}]: {:#?}", i, j, *(curr_bseq_val.add(j as usize)));
+                }
+
+                println!("");
+            }
 
             let cons_seq: *mut *mut *mut u8 = ptr::null_mut();
             let cons_cov: *mut *mut *mut c_int = ptr::null_mut();
