@@ -73,17 +73,14 @@ mod tests {
             // - each column represents a base as per the _nth4_table
             // Bseqs is a Vec of pointers each pointing to one row
 
-            let mut bseqs_val_val : Vec<Vec<u8>> = Vec::new();
-            for i in 0..n_seqs {
-                bseqs_val_val.push(Vec::new());
-            }
+            let mut bseqs_val_val : Vec<Vec<u8>> = vec![Vec::new();seqs.len()];
             let mut bseqs_val: Vec<*mut u8> = Vec::with_capacity(seqs.len());
             for i in 0..bseqs_val.len() {
                 let mut bval = bseqs_val.get_mut(i).unwrap();
                 *bval = bseqs_val_val.get_mut(i as usize).unwrap().as_mut_ptr();
             }
 
-            let bseqs = bseqs_val.as_mut_ptr();
+            let bseqs : *mut *mut u8 = bseqs_val.as_mut_ptr();
             for i in 0..n_seqs {
                 let curr_seq : &str = seqs.get(i as usize).unwrap();
                 let mut curr_seq_len : &mut c_int = seq_lens_val.get_mut(i as usize).unwrap();
