@@ -60,20 +60,24 @@ mod tests {
                 4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4
             ];
 
-            // c_int is an alias for i32
-            let n_seqs: c_int = 10;
-            //let seq_lens: *mut c_int  = malloc((mem::size_of::<i32>() * n_seqs as usize) as u64) as *mut c_int;
-            let mut seq_lens_val : [c_int; 10] = [0; 10];
 
+            // Get the number of input sequences
+            let n_seqs: c_int = seqs.len() as c_int;
+
+            // Create a Vec with the sequences' length
+            let mut seq_lens_val : Vec<c_int> = vec![0;seqs.len()];
             let seq_lens: *mut c_int  = seq_lens_val.as_mut_ptr();
 
-            //let bseqs: *mut *mut u8 = malloc((mem::size_of::<u8>() * n_seqs as usize) as u64) as *mut *mut u8;
+            // Create a matrix (bseqs_val) where:
+            // - each row represents an input sequence (rows can have different lengths)
+            // - each column represents a base as per the _nth4_table
+            // Bseqs is a Vec of pointers each pointing to one row
+
             let mut bseqs_val_val : Vec<Vec<u8>> = Vec::new();
             for i in 0..n_seqs {
                 bseqs_val_val.push(Vec::new());
             }
-            let mut bseqs_val: [* mut u8; 10] = [ptr::null_mut();10];
-
+            let mut bseqs_val: Vec<*mut u8> = Vec::with_capacity(seqs.len());
             for i in 0..bseqs_val.len() {
                 let mut bval = bseqs_val.get_mut(i).unwrap();
                 *bval = bseqs_val_val.get_mut(i as usize).unwrap().as_mut_ptr();
@@ -82,33 +86,27 @@ mod tests {
             let bseqs = bseqs_val.as_mut_ptr();
             for i in 0..n_seqs {
                 let curr_seq : &str = seqs.get(i as usize).unwrap();
-                //seq_lens[i] = &strlen(seqs[i]);
                 let mut curr_seq_len : &mut c_int = seq_lens_val.get_mut(i as usize).unwrap();
                 *curr_seq_len = curr_seq.len() as c_int;
-                //bseqs[i] = malloc(u8::size_of() * seq_lens[i]);
-                //println!("Curr seq: {:#?}", curr_seq);
-                //let curr_seq_as_chars = curr_seq.chars();
-                //println!("Chars: {:#?}\n", curr_seq_as_chars);
                 let mut curr_numbers : Vec<u8> = curr_seq.chars()
                                                 .map(|c| *(_nt4_table).get(c as usize).unwrap())
                                                 .collect();
-                //println!("Curr numbers: {:#?}", curr_numbers);
-                /*
-                for char in curr_seq_as_chars {
-                    println!("Char {} is as usize: {} value matrix: {} (as u8: {})", char, char as usize, *(_nt4_table).get(char as usize).unwrap(), *(_nt4_table).get(char as usize).unwrap() as u8);
-                }
-                 */
 
-                //let mut curr_bseq_val = bseqs_val.get_mut(i as usize).unwrap();
-                //*curr_bseq_val = curr_numbers.as_mut_ptr();
                 let mut bval : &mut Vec<u8> = bseqs_val_val.get_mut(i as usize).unwrap();
                 *bval = curr_numbers;
             }
 
+            // Test: print seq_lens using pointers
+            for i in 0..n_seqs {
+                println!("Seq_lens[{}] is: {}", i, *seq_lens.add(i as usize));
+            }
+
             /*
-            println!("ab: {:#?}", ab);
-            println!("abpt: {:#?}", abpt);
-            println!("Seq lens: {:#?}", seq_lens_val);
+            // Test: print bseqs using pointers
+            for i in 0..n_seqs {
+                let curr_bseq = bseqs;
+                println!("value is: {}", **curr_bseq.add(i as usize));
+            }
             for i in 0..n_seqs {
                 let mut curr_bseq_val = bseqs_val.get_mut(i as usize).unwrap();
 
@@ -120,14 +118,13 @@ mod tests {
 
                 println!("");
             }
-
              */
 
-            /*
-            abpoa_msa(ab, abpt, n_seqs, ptr::null_mut(), seq_lens, bseqs, stdout,
+            abpoa_msa(ab, abpt, n_seqs, ptr::null_mut(), seq_lens, bseqs, ptr::null_mut(),
                       ptr::null_mut(), ptr::null_mut(), ptr::null_mut(),
                       ptr::null_mut(), ptr::null_mut(), ptr::null_mut());
 
+            /*
             let cons_seq: *mut *mut *mut u8 = ptr::null_mut();
             let cons_cov: *mut *mut *mut c_int = ptr::null_mut();
             let cons_l : *mut *mut c_int = ptr::null_mut();
