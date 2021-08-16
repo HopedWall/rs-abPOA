@@ -52,8 +52,8 @@ fn main() {
         let n_seqs: c_int = seqs.len() as c_int;
 
         // Create a Vec with the sequences' length
-        let mut seq_lens_val : Vec<c_int> = seqs.iter().map(|s| s.len() as c_int).collect();
-        let seq_lens: *mut c_int  = seq_lens_val.as_mut_ptr();
+        let mut seq_lens: Vec<c_int> = seqs.iter().map(|s| s.len() as c_int).collect();
+        //let seq_lens: *mut c_int  = seq_lens_val.as_mut_ptr();
         //println!("seq lens: {:#?}", seq_lens_val);
 
         // Create a matrix (bseqs_val) where:
@@ -69,25 +69,31 @@ fn main() {
         //println!("bseqs val val: {:#?}",bseqs_val_val);
 
         let mut bseqs_val: Vec<*mut u8> = bseqs_val_val.iter_mut().map(|s| s.as_mut_ptr()).collect();
-        let bseqs : *mut *mut u8 = bseqs_val.as_mut_ptr();
+        //let bseqs : *mut *mut u8 = bseqs_val.as_mut_ptr();
 
         // Now perform the alignment
-        let cons_seq: *mut *mut *mut u8 = ptr::null_mut();
-        let cons_c: *mut *mut *mut c_int = ptr::null_mut();
-        let cons_l : *mut *mut c_int = ptr::null_mut();
-        let cons_n: *mut c_int = ptr::null_mut();
-        let msa_seq: *mut *mut *mut u8 = ptr::null_mut();
-        let msa_l : *mut c_int = ptr::null_mut(); //&mut 0 as *mut c_int;
-        let out : *mut FILE = stdout;
+        let mut cons_seq: *mut *mut u8 = ptr::null_mut();
+        let mut cons_c: *mut *mut c_int = ptr::null_mut();
+        let mut cons_l : *mut c_int = ptr::null_mut();
+        let mut cons_n: c_int = 0;
+        let mut msa_seq: *mut *mut u8 = ptr::null_mut();
+        let mut msa_l : c_int = 0;
+        let out : *mut FILE = ptr::null_mut(); //stdout;
 
-        abpoa_msa(ab, abpt, n_seqs, ptr::null_mut(), seq_lens, bseqs, out,
-                  cons_seq, cons_c, cons_l,
-                  cons_n, msa_seq, msa_l);
+        abpoa_msa(ab, abpt, n_seqs, ptr::null_mut(), seq_lens.as_mut_ptr(), bseqs_val.as_mut_ptr(), out,
+                  &mut cons_seq, &mut cons_c, &mut cons_l,
+                  &mut cons_n, &mut msa_seq, &mut msa_l);
 
+        let alphabet = String::from("ACGTN-");
+        let alphabet_vec : Vec<char> = alphabet.chars().collect();
+        println!("msa_l: {}", msa_l);
         for i in 0..n_seqs {
-            for j in 0..*msa_l {
-                println!("lol");
+            let outer_pointer = *msa_seq.add((i) as usize);
+            for j in 0..msa_l {
+                let inner_pointer = *(outer_pointer.add(j as usize));
+                print!("{}", alphabet_vec.get(inner_pointer as usize).unwrap());
             }
+            println!("");
         }
 
         //println!("out: {}", (*out));
