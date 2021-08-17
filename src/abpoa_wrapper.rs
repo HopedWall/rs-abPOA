@@ -1,6 +1,7 @@
-use crate::abpoa::{abpoa_t, abpoa_para_t, abpoa_init_para, abpoa_init, FILE, abpoa_msa, abpoa_post_set_para};
-use std::os::raw::c_int;
+use crate::abpoa::{abpoa_t, abpoa_para_t, abpoa_init_para, abpoa_init, FILE, abpoa_msa, abpoa_post_set_para, strdup, abpoa_dump_pog};
+use std::os::raw::{c_int, c_char};
 use std::ptr;
+use std::ffi::CString;
 
 pub struct AbpoaAligner {
     ab: *mut abpoa_t,
@@ -57,6 +58,10 @@ impl AbpoaAligner {
         abpoa_post_set_para(self.abpt);
     }
 
+    pub unsafe fn reset_aligner(&mut self) {
+        (*(*self.ab).abs).n_seq = 0;
+    }
+
     // NOTE: Rust does not support static fields, using const is the closest thing to that
     // see: https://stackoverflow.com/a/48972982
     const NT4_TABLE : [u8; 256] = [
@@ -77,7 +82,8 @@ impl AbpoaAligner {
             4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
             4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4
         ];
-
+    const ALN_ALPHABET : [char; 6] = ['A','C', 'G', 'T', 'N', '-'];
+    const CONS_ALPHABET : [char; 5] = ['A','C', 'G', 'T', 'N'];
 
     pub unsafe fn align_seqs(&self, seqs : &[&str]) -> AbpoaMSA {
         // Get the number of input sequences
@@ -110,21 +116,26 @@ impl AbpoaAligner {
                   &mut cons_n, &mut msa_seq, &mut msa_l);
 
         // Read the alignment's results
-        let alphabet = String::from("ACGTN-");
-        let alphabet_vec : Vec<char> = alphabet.chars().collect();
-
         let mut msa : Vec<String> = Vec::new();
         for i in 0..n_seqs {
             let mut curr_aln = String::with_capacity(msa_l as usize);
             let outer_pointer = *msa_seq.add((i) as usize);
             for j in 0..msa_l {
                 let inner_pointer = *(outer_pointer.add(j as usize));
-                curr_aln.push(*alphabet_vec.get(inner_pointer as usize).unwrap());
+                curr_aln.push(*AbpoaAligner::ALN_ALPHABET.get(inner_pointer as usize).unwrap());
             }
             msa.push(curr_aln);
         }
 
         AbpoaMSA::new_from_alignment(msa, n_seqs as usize, msa_l as usize)
+    }
+
+    pub unsafe fn print_aln_to_dot(&mut self, path: &str) {
+        // Build a C String to store path
+        let c_str = CString::new(path).unwrap();
+
+        (*self.abpt).out_pog = strdup(c_str.as_ptr() as *const c_char);
+        abpoa_dump_pog(self.ab, self.abpt);
     }
 }
 
@@ -133,7 +144,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test() {
+    fn test_aln() {
         unsafe {
             let mut aligner = AbpoaAligner::new();
 
@@ -161,7 +172,13 @@ mod tests {
 
             let aln = aligner.align_seqs(&*seqs);
 
-            println!("MSA: {:#?}", aln.msa);
+            //aligner.print_aln_to_dot("example.png");
+
+            aligner.reset_aligner();
+
+            //println!("MSA: {:#?}", aln.msa);
+            assert_eq!(aln.n_seqs, seqs.len());
+            assert_eq!(aln.msa_length, 75);
         }
     }
 }
