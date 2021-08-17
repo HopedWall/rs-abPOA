@@ -25,6 +25,21 @@ impl AbpoaMSA {
     }
 }
 
+pub struct AbpoaCons {
+    pub cons_length : usize,
+    pub cons : String,
+}
+
+impl AbpoaCons {
+    fn new() -> Self {
+        AbpoaCons {cons_length: 0, cons: String::new()}
+    }
+
+    fn new_from_cons(cons : String) -> Self {
+        AbpoaCons {cons_length: cons.len(), cons}
+    }
+}
+
 impl AbpoaAligner {
     pub unsafe fn new() -> Self {
         AbpoaAligner { ab: abpoa_init(), abpt: abpoa_init_para() }
@@ -130,6 +145,50 @@ impl AbpoaAligner {
         AbpoaMSA::new_from_alignment(msa, n_seqs as usize, msa_l as usize)
     }
 
+    pub unsafe fn consensus_from_seqs(&self, seqs : &[&str]) -> AbpoaCons {
+        // Get the number of input sequences
+        let n_seqs: c_int = seqs.len() as c_int;
+
+        // Create a Vec with the sequences' length
+        let mut seq_lens: Vec<c_int> = seqs.iter().map(|s| s.len() as c_int).collect();
+
+        // Generate bseqs
+        let mut bseqs_val : Vec<Vec<u8>> = seqs.into_iter().map(|s| {
+            s.chars()
+                .map(|c| *(AbpoaAligner::NT4_TABLE).get(c as usize).unwrap())
+                .collect()
+        }).collect();
+
+        let mut bseqs: Vec<*mut u8> = bseqs_val.iter_mut().map(|s| s.as_mut_ptr()).collect();
+
+        // Now perform the alignment
+        let mut cons_seq: *mut *mut u8 = ptr::null_mut();
+        let mut cons_c: *mut *mut c_int = ptr::null_mut();
+        let mut cons_l : *mut c_int = ptr::null_mut();
+        let mut cons_n: c_int = 0;
+        let mut msa_seq: *mut *mut u8 = ptr::null_mut();
+        let mut msa_l : c_int = 0;
+        let out : *mut FILE = ptr::null_mut(); //stdout;
+
+        abpoa_msa(self.ab, self.abpt, n_seqs, ptr::null_mut(), seq_lens.as_mut_ptr(),
+                  bseqs.as_mut_ptr(), out,
+                  &mut cons_seq, &mut cons_c, &mut cons_l,
+                  &mut cons_n, &mut msa_seq, &mut msa_l);
+
+        // Read the consensus
+        let mut cons = String::with_capacity(*cons_l as usize);
+        for i in 0..cons_n {
+            let offset = *cons_l.add((i) as usize);
+            for j in 0..offset {
+                let outer_pointer = *cons_seq.add(i as usize);
+                let inner_pointer = *(outer_pointer.add(j as usize));
+                cons.push(*AbpoaAligner::CONS_ALPHABET.get(inner_pointer as usize).unwrap());
+            }
+        }
+
+        AbpoaCons::new_from_cons(cons)
+    }
+
     pub unsafe fn print_aln_to_dot(&mut self, path: &str) {
         // Build a C String to store path
         let c_str = CString::new(path).unwrap();
@@ -179,6 +238,45 @@ mod tests {
             //println!("MSA: {:#?}", aln.msa);
             assert_eq!(aln.n_seqs, seqs.len());
             assert_eq!(aln.msa_length, 75);
+        }
+    }
+
+    #[test]
+    fn test_cons() {
+        unsafe {
+            let mut aligner = AbpoaAligner::new();
+
+            aligner.set_out_msa(true);
+            aligner.set_out_cons(true);
+            aligner.set_w(6);
+            aligner.set_k(9);
+            aligner.set_min_w(10);
+            aligner.set_progressive_poa(true);
+
+            aligner.set_post_para();
+
+            let seqs: Vec<&str> = [
+                "CGTCAATCTATCGAAGCATACGCGGGCAGAGCCGAAGACCTCGGCAATCCA",
+                "CCACGTCAATCTATCGAAGCATACGCGGCAGCCGAACTCGACCTCGGCAATCAC",
+                "CGTCAATCTATCGAAGCATACGCGGCAGAGCCCGGAAGACCTCGGCAATCAC",
+                "CGTCAATGCTAGTCGAAGCAGCTGCGGCAGAGCCGAAGACCTCGGCAATCAC",
+                "CGTCAATCTATCGAAGCATTCTACGCGGCAGAGCCGACCTCGGCAATCAC",
+                "CGTCAATCTAGAAGCATACGCGGCAAGAGCCGAAGACCTCGGCCAATCAC",
+                "CGTCAATCTATCGGTAAAGCATACGCTCTGTAGCCGAAGACCTCGGCAATCAC",
+                "CGTCAATCTATCTTCAAGCATACGCGGCAGAGCCGAAGACCTCGGCAATC",
+                "CGTCAATGGATCGAGTACGCGGCAGAGCCGAAGACCTCGGCAATCAC",
+                "CGTCAATCTAATCGAAGCATACGCGGCAGAGCCGTCTACCTCGGCAATCACGT"
+            ].to_vec();
+
+            let cons = aligner.consensus_from_seqs(&*seqs);
+
+            //aligner.print_aln_to_dot("example.png");
+
+            aligner.reset_aligner();
+
+            println!("Cons: {:#?}", cons.cons);
+            //assert_eq!(aln.n_seqs, seqs.len());
+            //assert_eq!(aln.msa_length, 75);
         }
     }
 }
