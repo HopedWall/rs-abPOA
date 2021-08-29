@@ -3,7 +3,6 @@ extern crate bindgen;
 use std::path::PathBuf;
 
 fn main() {
-
     //Example command to compile .c
     //gcc -g example.c -I ./include -L ./lib -labpoa -lz -o example
 
@@ -13,6 +12,9 @@ fn main() {
 
     // include z library (-lz)
     println!("cargo:rustc-link-lib=z");
+
+    // TODO (write in readme): it may be necessary to install clang if not present
+    //sudo apt-get install -y clang
 
     // Tell cargo to invalidate the built crate whenever the wrapper changes
     //println!("cargo:rerun-if-changed=wrapper.h");
