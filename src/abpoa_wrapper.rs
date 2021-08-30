@@ -1,7 +1,8 @@
 use crate::abpoa::{
-    abpoa_add_graph_edge, abpoa_add_graph_node, abpoa_dump_pog, abpoa_init, abpoa_init_para,
-    abpoa_msa, abpoa_para_t, abpoa_post_set_para, abpoa_t, free, strdup, ABPOA_SINK_NODE_ID,
-    ABPOA_SRC_NODE_ID, FILE,
+    abpoa_add_graph_edge, abpoa_add_graph_node, abpoa_align_sequence_to_graph, abpoa_dump_pog,
+    abpoa_init, abpoa_init_para, abpoa_msa, abpoa_para_t, abpoa_post_set_para, abpoa_res_t,
+    abpoa_t, free, strdup, ABPOA_SINK_NODE_ID, ABPOA_SRC_NODE_ID, FILE,
+    ABPOA_CMATCH, ABPOA_CDIFF, ABPOA_CINS, ABPOA_CDEL, ABPOA_CSOFT_CLIP, ABPOA_CHARD_CLIP
 };
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int};
@@ -272,7 +273,7 @@ impl AbpoaAligner {
             .collect();
 
         //Then add the edges between said nodes
-        ids.windows(2).map(|w| {
+        ids.windows(2).for_each(|w| {
             abpoa_add_graph_edge(
                 (*self.ab).abg,
                 *w.get(0).unwrap(),
@@ -282,7 +283,7 @@ impl AbpoaAligner {
                 0,
                 0,
                 0,
-            )
+            );
         });
 
         // Update wrapper data
@@ -307,7 +308,7 @@ impl AbpoaAligner {
         });
 
         if self.n_nodes > 0 {
-            // Add initial edge
+            // Add initial edge -- ABPOA_SRC_NODE_ID has node id 0
             abpoa_add_graph_edge(
                 (*self.ab).abg,
                 ABPOA_SRC_NODE_ID as i32,
@@ -319,7 +320,7 @@ impl AbpoaAligner {
                 0,
             );
 
-            // Add last edge
+            // Add last edge -- ABPOA_SINK_NODE_ID has node id 1
             abpoa_add_graph_edge(
                 (*self.ab).abg,
                 *self.nodes.last().unwrap().last().unwrap(),
@@ -332,11 +333,64 @@ impl AbpoaAligner {
             );
         }
     }
+
+    pub unsafe fn align_sequence(&mut self, seq: &str) {
+        let mut bseq: Vec<u8> = seq
+            .chars()
+            .map(|c| *(AbpoaAligner::NT4_TABLE).get(c as usize).unwrap())
+            .collect();
+
+        let mut res = abpoa_res_t {
+            n_cigar: 0,
+            m_cigar: 0,
+            graph_cigar: vec![].as_mut_ptr(),
+            node_s: 0,
+            node_e: 0,
+            query_s: 0,
+            query_e: 0,
+            n_aln_bases: 0,
+            n_matched_bases: 0,
+            best_score: 0,
+        };
+
+        abpoa_align_sequence_to_graph(
+            self.ab,
+            self.abpt,
+            bseq.as_mut_ptr(),
+            seq.len() as i32,
+            &mut res,
+        );
+
+        let mut op: u32 = 0;
+        let mut op_string = String::new();
+        let mut node_id: u64 = 0;
+        for i in 0..res.n_cigar {
+            let curr_cigar = res.graph_cigar.add(i as usize);
+            op = (*curr_cigar & 0xf) as u32;
+
+            // See ABPOA_CMATCH, ABPOA_INS, ...
+            op_string = match op {
+                ABPOA_CMATCH => "MATCH".to_string(),
+                ABPOA_CINS => "INS".to_string(),
+                ABPOA_CDEL => "DEL".to_string(),
+                ABPOA_CDIFF => "DIFF".to_string(),
+                ABPOA_CSOFT_CLIP => "CLIP1".to_string(),
+                ABPOA_CHARD_CLIP => "CLIP2".to_string(),
+                _ => "".to_string(),
+            };
+
+            node_id = (*curr_cigar >> 34) & 0x3fffffff;
+            println!("OP_String: {}, Node_id: {}", op_string, node_id);
+
+            // TODO: make an alignment_result class (CIGAR etc.)
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::abpoa::{abpoa_generate_gfa, stdout};
 
     #[test]
     fn test_aln() {
@@ -436,6 +490,15 @@ mod tests {
             assert_eq!(aligner.nodes.len(), 3);
             assert_eq!(aligner.n_nodes, 9);
             assert_eq!(aligner.edges.len(), 2);
+        }
+    }
+
+    #[test]
+    fn test_alignment() {
+        unsafe {
+            let mut aligner = AbpoaAligner::new();
+            aligner.add_nodes_edges(&vec!["ACT"], &vec![]);
+            aligner.align_sequence("ACT");
         }
     }
 }
