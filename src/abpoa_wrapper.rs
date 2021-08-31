@@ -174,7 +174,7 @@ impl AbpoaAligner {
             .collect()
     }
 
-    pub unsafe fn align_seqs(&self, seqs: &[&str]) -> AbpoaMSA {
+    pub unsafe fn align_seqs(&self, seqs: &Vec<&str>) -> AbpoaMSA {
         // Get the number of input sequences
         let n_seqs: c_int = seqs.len() as c_int;
 
@@ -233,7 +233,7 @@ impl AbpoaAligner {
         AbpoaMSA::new_from_alignment(msa, n_seqs as usize, msa_l as usize)
     }
 
-    pub unsafe fn consensus_from_seqs(&self, seqs: &[&str]) -> AbpoaCons {
+    pub unsafe fn consensus_from_seqs(&self, seqs: &Vec<&str>) -> AbpoaCons {
         // Get the number of input sequences
         let n_seqs: c_int = seqs.len() as c_int;
 
@@ -492,7 +492,7 @@ mod tests {
             ]
             .to_vec();
 
-            let aln = aligner.align_seqs(&*seqs);
+            let aln = aligner.align_seqs(&seqs);
 
             //aligner.print_aln_to_dot("example.png");
 
@@ -523,7 +523,7 @@ mod tests {
             ]
             .to_vec();
 
-            let cons = aligner.consensus_from_seqs(&*seqs);
+            let cons = aligner.consensus_from_seqs(&seqs);
             //aligner.print_aln_to_dot("example.png");
 
             //aligner.reset_aligner();

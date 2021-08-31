@@ -21,7 +21,7 @@ let seqs: Vec<&str> = [
     "CGTCAATGCTA",
 ].to_vec();
 
-let aln = aligner.align_seqs(&*seqs);
+let aln = aligner.align_seqs(&seqs);
 ```
 
 ### Consensus
@@ -35,12 +35,12 @@ let seqs: Vec<&str> = [
     "CGTCAATGCTA",
 ].to_vec();
 
-let cons = aligner.consensus_from_seqs(&*seqs);
+let cons = aligner.consensus_from_seqs(&seqs);
 ```
 
 ## Interacting with abPOA
 This crate also provides an abstraction layer over abPOA, 
-that allows for the definition of nodes labelled with with seqs of any size. 
+that allows for the definition of nodes labelled with seqs of any size. 
 ```
 let mut aligner = AbpoaAligner::new_with_example_params();
 
@@ -50,3 +50,9 @@ aligner.add_nodes_edges(&vec!["ACG", "AAA"], &vec![(0, 1)]);
 // Align "ATG" to the graph defined above
 let res = aligner.align_sequence("ACG");
 ```
+
+## TODOs
+- [X] Raw bindings and wrapper
+- [ ] Build abPOA from source
+- [ ] Limit unsafe usage
+- [ ] Find a more efficient way to abpoa_id -> graph_id
