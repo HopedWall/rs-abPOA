@@ -1,8 +1,8 @@
 use crate::abpoa::{
     abpoa_add_graph_edge, abpoa_add_graph_node, abpoa_align_sequence_to_graph, abpoa_dump_pog,
     abpoa_init, abpoa_init_para, abpoa_msa, abpoa_para_t, abpoa_post_set_para, abpoa_res_t,
-    abpoa_t, free, strdup, ABPOA_SINK_NODE_ID, ABPOA_SRC_NODE_ID, FILE,
-    ABPOA_CMATCH, ABPOA_CDIFF, ABPOA_CINS, ABPOA_CDEL, ABPOA_CSOFT_CLIP, ABPOA_CHARD_CLIP
+    abpoa_t, free, strdup, ABPOA_CDEL, ABPOA_CDIFF, ABPOA_CHARD_CLIP, ABPOA_CINS, ABPOA_CMATCH,
+    ABPOA_CSOFT_CLIP, ABPOA_SINK_NODE_ID, ABPOA_SRC_NODE_ID, FILE,
 };
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int};
@@ -71,7 +71,7 @@ impl AbpoaCons {
 pub struct AbpoaAlignmentResult {
     pub cigar: String,
     pub abpoa_nodes: Vec<u64>,
-    pub graph_nodes: Vec<usize>
+    pub graph_nodes: Vec<usize>,
 }
 
 impl AbpoaAlignmentResult {
@@ -79,7 +79,7 @@ impl AbpoaAlignmentResult {
         AbpoaAlignmentResult {
             cigar: "".to_string(),
             abpoa_nodes: vec![],
-            graph_nodes: vec![]
+            graph_nodes: vec![],
         }
     }
 
@@ -87,7 +87,7 @@ impl AbpoaAlignmentResult {
         AbpoaAlignmentResult {
             cigar: cigar.to_string(),
             abpoa_nodes,
-            graph_nodes
+            graph_nodes,
         }
     }
 }
@@ -101,6 +101,23 @@ impl AbpoaAligner {
             nodes: vec![],
             edges: vec![],
         }
+    }
+
+    // Initializes the aligner with the example.c params,
+    // this is useful for debugging against the example.c
+    // file in the original abpoa's repo
+    pub unsafe fn new_with_example_params() -> Self {
+        let mut aligner = AbpoaAligner::new();
+
+        aligner.set_out_msa(true);
+        aligner.set_out_cons(true);
+        aligner.set_w(6);
+        aligner.set_k(9);
+        aligner.set_min_w(10);
+        aligner.set_progressive_poa(true);
+        aligner.set_post_para();
+
+        aligner
     }
 
     pub unsafe fn set_out_msa(&mut self, val: bool) {
@@ -151,6 +168,12 @@ impl AbpoaAligner {
     const ALN_ALPHABET: [char; 6] = ['A', 'C', 'G', 'T', 'N', '-'];
     const CONS_ALPHABET: [char; 5] = ['A', 'C', 'G', 'T', 'N'];
 
+    pub fn convert_seq_to_bseq(seq: &str) -> Vec<u8> {
+        seq.chars()
+            .map(|c| *(AbpoaAligner::NT4_TABLE).get(c as usize).unwrap())
+            .collect()
+    }
+
     pub unsafe fn align_seqs(&self, seqs: &[&str]) -> AbpoaMSA {
         // Get the number of input sequences
         let n_seqs: c_int = seqs.len() as c_int;
@@ -161,11 +184,7 @@ impl AbpoaAligner {
         // Generate bseqs
         let mut bseqs_val: Vec<Vec<u8>> = seqs
             .into_iter()
-            .map(|s| {
-                s.chars()
-                    .map(|c| *(AbpoaAligner::NT4_TABLE).get(c as usize).unwrap())
-                    .collect()
-            })
+            .map(|s| AbpoaAligner::convert_seq_to_bseq(s))
             .collect();
 
         let mut bseqs: Vec<*mut u8> = bseqs_val.iter_mut().map(|s| s.as_mut_ptr()).collect();
@@ -224,11 +243,7 @@ impl AbpoaAligner {
         // Generate bseqs
         let mut bseqs_val: Vec<Vec<u8>> = seqs
             .into_iter()
-            .map(|s| {
-                s.chars()
-                    .map(|c| *(AbpoaAligner::NT4_TABLE).get(c as usize).unwrap())
-                    .collect()
-            })
+            .map(|s| AbpoaAligner::convert_seq_to_bseq(s))
             .collect();
 
         let mut bseqs: Vec<*mut u8> = bseqs_val.iter_mut().map(|s| s.as_mut_ptr()).collect();
@@ -316,6 +331,10 @@ impl AbpoaAligner {
         self.nodes.push(ids);
     }
 
+    pub unsafe fn add_node(&mut self, base: u8) -> i32 {
+        abpoa_add_graph_node((*self.ab).abg, base)
+    }
+
     pub unsafe fn add_edge(&mut self, from_node_id: i32, to_node_id: i32) {
         abpoa_add_graph_edge((*self.ab).abg, from_node_id, to_node_id, 0, 1, 0, 0, 0);
     }
@@ -327,9 +346,9 @@ impl AbpoaAligner {
         // Add edges between nodes
         edges.iter().for_each(|e| {
             self.edges.push((e.0, e.1));
-            let last_of_start_node = self.nodes.get(e.0).unwrap().last().unwrap();
-            let first_of_end_node = self.nodes.get(e.1).unwrap().first().unwrap();
-            self.add_edge(*last_of_start_node, *first_of_end_node);
+            let last_of_start_node = self.nodes.get(e.0).unwrap().last().unwrap().clone();
+            let first_of_end_node = self.nodes.get(e.1).unwrap().first().unwrap().clone();
+            self.add_edge(last_of_start_node, first_of_end_node);
         });
 
         if self.n_nodes > 0 {
@@ -360,10 +379,7 @@ impl AbpoaAligner {
     }
 
     pub unsafe fn align_sequence(&mut self, seq: &str) -> AbpoaAlignmentResult {
-        let mut bseq: Vec<u8> = seq
-            .chars()
-            .map(|c| *(AbpoaAligner::NT4_TABLE).get(c as usize).unwrap())
-            .collect();
+        let mut bseq: Vec<u8> = AbpoaAligner::convert_seq_to_bseq(seq);
 
         let mut res = abpoa_res_t {
             n_cigar: 0,
@@ -387,19 +403,19 @@ impl AbpoaAligner {
         );
 
         // Create variables to store aln result
-        let mut abpoa_ids : Vec<u64> = Vec::new();
-        let mut graph_ids : Vec<usize> = Vec::new();
-        let mut cigar_vec : Vec<char> = Vec::new();
+        let mut abpoa_ids: Vec<u64> = Vec::new();
+        let mut graph_ids: Vec<usize> = Vec::new();
+        let mut cigar_vec: Vec<char> = Vec::new();
 
         // Navigate the cigar
-        let mut op: u32 = 0;
-        let mut op_char = ' ';
-        let mut node_id: u64 = 0;
+        //let mut op: u32 = 0;
+        //let mut op_char = ' ';
+        //let mut node_id: u64 = 0;
         for i in 0..res.n_cigar {
             let curr_cigar = res.graph_cigar.add(i as usize);
-            op = (*curr_cigar & 0xf) as u32;
+            let op = (*curr_cigar & 0xf) as u32;
 
-            op_char = match op {
+            let op_char = match op {
                 ABPOA_CMATCH => 'M',
                 ABPOA_CINS => 'I',
                 ABPOA_CDEL => 'D',
@@ -409,13 +425,12 @@ impl AbpoaAligner {
                 _ => ' ',
             };
 
-            node_id = (*curr_cigar >> 34) & 0x3fffffff;
+            let node_id = (*curr_cigar >> 34) & 0x3fffffff;
 
             abpoa_ids.push(node_id);
             cigar_vec.push(op_char);
         }
 
-        println!("Cigar vec {:#?}",cigar_vec);
         // Compact cigar
         let mut cigar_string = String::new();
         if !cigar_vec.is_empty() {
@@ -424,7 +439,8 @@ impl AbpoaAligner {
 
             for char in cigar_vec {
                 if char != last_char {
-                    if last_char != ' ' { // This is the initial delimiter
+                    if last_char != ' ' {
+                        // This is the initial delimiter
                         cigar_string.push_str(&mut format!("{}{}", count, last_char));
                     }
                     last_char = char;
@@ -447,7 +463,6 @@ impl AbpoaAligner {
             }
         }
 
-
         AbpoaAlignmentResult::new_with_params(cigar_string.as_str(), abpoa_ids, graph_ids)
     }
 }
@@ -457,19 +472,11 @@ mod tests {
     use super::*;
     use crate::abpoa::{abpoa_generate_gfa, stdout};
 
+    // ----- Check msa and consensus ("black-box" version) -----
     #[test]
     fn test_aln() {
         unsafe {
-            let mut aligner = AbpoaAligner::new();
-
-            aligner.set_out_msa(true);
-            aligner.set_out_cons(true);
-            aligner.set_w(6);
-            aligner.set_k(9);
-            aligner.set_min_w(10);
-            aligner.set_progressive_poa(true);
-
-            aligner.set_post_para();
+            let mut aligner = AbpoaAligner::new_with_example_params();
 
             let seqs: Vec<&str> = [
                 "CGTCAATCTATCGAAGCATACGCGGGCAGAGCCGAAGACCTCGGCAATCCA",
@@ -489,7 +496,7 @@ mod tests {
 
             //aligner.print_aln_to_dot("example.png");
 
-            aligner.reset_aligner();
+            //aligner.reset_aligner();
 
             //println!("MSA: {:#?}", aln.msa);
             assert_eq!(aln.n_seqs, seqs.len());
@@ -500,16 +507,7 @@ mod tests {
     #[test]
     fn test_cons() {
         unsafe {
-            let mut aligner = AbpoaAligner::new();
-
-            aligner.set_out_msa(true);
-            aligner.set_out_cons(true);
-            aligner.set_w(6);
-            aligner.set_k(9);
-            aligner.set_min_w(10);
-            aligner.set_progressive_poa(true);
-
-            aligner.set_post_para();
+            let mut aligner = AbpoaAligner::new_with_example_params();
 
             let seqs: Vec<&str> = [
                 "CGTCAATCTATCGAAGCATACGCGGGCAGAGCCGAAGACCTCGGCAATCCA",
@@ -526,17 +524,15 @@ mod tests {
             .to_vec();
 
             let cons = aligner.consensus_from_seqs(&*seqs);
-
             //aligner.print_aln_to_dot("example.png");
 
-            aligner.reset_aligner();
-
-            println!("Cons: {:#?}", cons.cons);
+            //aligner.reset_aligner();
             //assert_eq!(aln.n_seqs, seqs.len());
             //assert_eq!(aln.msa_length, 75);
         }
     }
 
+    // ----- Test basic abstraction functionalities -----
     #[test]
     fn test_add_nodes() {
         unsafe {
@@ -558,25 +554,26 @@ mod tests {
         }
     }
 
+    // ----- Test graph-to-seq alignment -----
     #[test]
-    fn test_alignment_single_node() {
+    fn test_alignment_1() {
         unsafe {
-            let mut aligner = AbpoaAligner::new();
+            let mut aligner = AbpoaAligner::new_with_example_params();
             aligner.add_nodes_edges(&vec!["ACT"], &vec![]);
             let res = aligner.align_sequence("ACT");
 
             assert_eq!(res.cigar, String::from("3M"));
             // These are the nodes in abpoa (remember, nodes are 1-base only!)
-            assert_eq!(res.abpoa_nodes, vec![2,3,4]);
+            assert_eq!(res.abpoa_nodes, vec![2, 3, 4]);
             // These are the nodes in our graph abstraction (nodes can have length > 1)
-            assert_eq!(res.graph_nodes, vec![0,0,0]);
+            assert_eq!(res.graph_nodes, vec![0, 0, 0]);
         }
     }
 
     #[test]
-    fn test_alignment_single_node_2() {
+    fn test_alignment_2() {
         unsafe {
-            let mut aligner = AbpoaAligner::new();
+            let mut aligner = AbpoaAligner::new_with_example_params();
             aligner.add_nodes_edges(&vec!["ACT"], &vec![]);
             let res = aligner.align_sequence("T");
 
@@ -589,36 +586,328 @@ mod tests {
     }
 
     #[test]
-    fn test_alignment_single_node_3() {
+    fn test_alignment_3() {
         unsafe {
-            let mut aligner = AbpoaAligner::new();
-            aligner.add_nodes_edges(&vec!["ACT"], &vec![]);
-            let res = aligner.align_sequence("AT");
+            let mut aligner = AbpoaAligner::new_with_example_params();
+            aligner.add_nodes_edges(&vec!["ACG"], &vec![]);
+            let res = aligner.align_sequence("ATG");
 
-            abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
-
-            assert_eq!(res.cigar, String::from("1M1D1M"));
+            //Unexpected but same behavior in C ver
+            assert_eq!(res.cigar, String::from("3M"));
             // These are the nodes in abpoa (remember, nodes are 1-base only!)
-            assert_eq!(res.abpoa_nodes, vec![2,4]);
+            assert_eq!(res.abpoa_nodes, vec![2, 3, 4]);
             // These are the nodes in our graph abstraction (nodes can have length > 1)
-            assert_eq!(res.graph_nodes, vec![0,0]);
+            assert_eq!(res.graph_nodes, vec![0, 0, 0]);
         }
     }
 
     #[test]
-    fn test_alignment_3() {
+    fn test_alignment_3_manual() {
+        unsafe {
+            let mut aligner = AbpoaAligner::new_with_example_params();
+            aligner.add_nodes_edges(&vec!["ACG"], &vec![]);
+            let res = aligner.align_sequence("ATG");
+
+            // Check against the "manual" version (= less wrapper abstractions used, closer
+            // to the original C impl.)
+            let res_manual = manual_test_single_node("ACG", "ATG");
+            assert_eq!(res.cigar, res_manual.cigar);
+            assert_eq!(res.abpoa_nodes, res_manual.abpoa_nodes);
+
+            // Makes no sense to compare res.graph_nodes because it is an abstraction
+            // only available in Rust
+        }
+    }
+
+    #[test]
+    fn test_alignment_4_multiple() {
+        unsafe {
+            let mut aligner = AbpoaAligner::new_with_example_params();
+            aligner.add_nodes_edges(&vec!["ACG", "AAA"], &vec![(0, 1)]);
+            let res = aligner.align_sequence("ATG");
+
+            //Unexpected but same behavior in C ver
+            assert_eq!(res.cigar, String::from("3M3D"));
+            // These are the nodes in abpoa (remember, nodes are 1-base only!)
+            assert_eq!(res.abpoa_nodes, vec![2, 3, 4, 5, 6, 7]);
+            // These are the nodes in our graph abstraction (nodes can have length > 1)
+            assert_eq!(res.graph_nodes, vec![0, 0, 0, 1, 1, 1]);
+        }
+    }
+
+    #[test]
+    fn test_alignment_4_multiple_manual() {
+        unsafe {
+            let mut aligner = AbpoaAligner::new_with_example_params();
+            aligner.add_nodes_edges(&vec!["ACG", "AAA"], &vec![(0, 1)]);
+            let res = aligner.align_sequence("ATG");
+
+            // Check against the "manual" version (= less wrapper abstractions used, closer
+            // to the original C impl.)
+            let res_manual = manual_test_multiple_nodes("ACG", "AAA", "ATG");
+            assert_eq!(res.cigar, res_manual.cigar);
+            assert_eq!(res.abpoa_nodes, res_manual.abpoa_nodes);
+
+            // Makes no sense to compare res.graph_nodes because it is an abstraction
+            // only available in Rust
+        }
+    }
+
+    fn manual_test_single_node(seq: &str, query: &str) -> AbpoaAlignmentResult {
         unsafe {
             let mut aligner = AbpoaAligner::new();
-            aligner.add_nodes_edges(&vec!["ACT", "AAA"], &vec![(0,1)]);
-            let res = aligner.align_sequence("ACT");
+
+            aligner.set_out_cons(true);
+            aligner.set_out_cons(true);
+            aligner.set_w(6);
+            aligner.set_k(9);
+            aligner.set_min_w(10);
+            aligner.set_progressive_poa(true);
+
+            abpoa_post_set_para(aligner.abpt);
+
+            let bseq: Vec<u8> = seq
+                .chars()
+                .map(|c| *(AbpoaAligner::NT4_TABLE).get(c as usize).unwrap())
+                .collect();
+
+            let mut ids: Vec<i32> = Vec::new();
+
+            for b in bseq {
+                let c_id = aligner.add_node(b);
+                ids.push(c_id);
+            }
+            //println!("ids: {:#?}", ids);
+
+            let mut prev_node_id = ABPOA_SRC_NODE_ID as i32;
+            let mut curr_node_id: i32 = 0;
+
+            for i in 0..ids.len() {
+                curr_node_id = *ids.get(i).unwrap();
+                aligner.add_edge(prev_node_id, curr_node_id);
+                prev_node_id = curr_node_id;
+            }
+            aligner.add_edge(curr_node_id, ABPOA_SINK_NODE_ID as i32);
 
             //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
 
-            assert_eq!(res.cigar, String::from("3M"));
-            // These are the nodes in abpoa (remember, nodes are 1-base only!)
-            assert_eq!(res.abpoa_nodes, vec![2,3,4]);
-            // These are the nodes in our graph abstraction (nodes can have length > 1)
-            assert_eq!(res.graph_nodes, vec![0,0,0]);
+            let mut query_bseq: Vec<u8> = query
+                .chars()
+                .map(|c| *(AbpoaAligner::NT4_TABLE).get(c as usize).unwrap())
+                .collect();
+
+            let mut res = abpoa_res_t {
+                n_cigar: 0,
+                m_cigar: 0,
+                graph_cigar: vec![].as_mut_ptr(),
+                node_s: 0,
+                node_e: 0,
+                query_s: 0,
+                query_e: 0,
+                n_aln_bases: 0,
+                n_matched_bases: 0,
+                best_score: 0,
+            };
+            abpoa_align_sequence_to_graph(
+                aligner.ab,
+                aligner.abpt,
+                query_bseq.as_mut_ptr(),
+                query.len() as i32,
+                &mut res,
+            );
+
+            // Create variables to store aln result
+            let mut abpoa_ids: Vec<u64> = Vec::new();
+            let mut graph_ids: Vec<usize> = Vec::new();
+            let mut cigar_vec: Vec<char> = Vec::new();
+
+            // Navigate the cigar
+            let mut op: u32 = 0;
+            let mut op_char = ' ';
+            let mut node_id: u64 = 0;
+            for i in 0..res.n_cigar {
+                let curr_cigar = res.graph_cigar.add(i as usize);
+                op = (*curr_cigar & 0xf) as u32;
+
+                op_char = match op {
+                    ABPOA_CMATCH => 'M',
+                    ABPOA_CINS => 'I',
+                    ABPOA_CDEL => 'D',
+                    ABPOA_CDIFF => 'X',
+                    ABPOA_CSOFT_CLIP => 'S',
+                    ABPOA_CHARD_CLIP => 'H',
+                    _ => ' ',
+                };
+
+                node_id = (*curr_cigar >> 34) & 0x3fffffff;
+                abpoa_ids.push(node_id);
+                cigar_vec.push(op_char);
+            }
+
+            //println!("Ids {:#?}", abpoa_ids);
+            //println!("Cigar vec {:#?}", cigar_vec);
+            // Compact cigar
+            let mut cigar_string = String::new();
+            if !cigar_vec.is_empty() {
+                let mut last_char = ' ';
+                let mut count = 0;
+
+                for char in cigar_vec {
+                    if char != last_char {
+                        if last_char != ' ' {
+                            // This is the initial delimiter
+                            cigar_string.push_str(&mut format!("{}{}", count, last_char));
+                        }
+                        last_char = char;
+                        count = 1;
+                    } else {
+                        count += 1;
+                    }
+                }
+
+                cigar_string.push_str(&mut format!("{}{}", count, last_char));
+            }
+
+            AbpoaAlignmentResult::new_with_params(cigar_string.as_str(), abpoa_ids, graph_ids)
+        }
+    }
+
+    fn manual_test_multiple_nodes(seq: &str, seq2: &str, query: &str) -> AbpoaAlignmentResult {
+        unsafe {
+            let mut aligner = AbpoaAligner::new();
+
+            aligner.set_out_cons(true);
+            aligner.set_out_cons(true);
+            aligner.set_w(6);
+            aligner.set_k(9);
+            aligner.set_min_w(10);
+            aligner.set_progressive_poa(true);
+
+            abpoa_post_set_para(aligner.abpt);
+
+            let bseq: Vec<u8> = seq
+                .chars()
+                .map(|c| *(AbpoaAligner::NT4_TABLE).get(c as usize).unwrap())
+                .collect();
+
+            let mut ids: Vec<i32> = Vec::new();
+
+            for b in bseq {
+                let c_id = aligner.add_node(b);
+                ids.push(c_id);
+            }
+            //println!("ids: {:#?}", ids);
+
+            let mut prev_node_id = ABPOA_SRC_NODE_ID as i32;
+            let mut curr_node_id: i32 = 0;
+
+            for i in 0..ids.len() {
+                curr_node_id = *ids.get(i).unwrap();
+                aligner.add_edge(prev_node_id, curr_node_id);
+                prev_node_id = curr_node_id;
+            }
+
+            // Add node 2
+            let bseq2: Vec<u8> = seq2
+                .chars()
+                .map(|c| *(AbpoaAligner::NT4_TABLE).get(c as usize).unwrap())
+                .collect();
+
+            let mut ids2: Vec<i32> = Vec::new();
+            for b in bseq2 {
+                let c_id = aligner.add_node(b);
+                ids2.push(c_id);
+            }
+            for i in 0..ids2.len() {
+                curr_node_id = *ids2.get(i).unwrap();
+                aligner.add_edge(prev_node_id, curr_node_id);
+                prev_node_id = curr_node_id;
+            }
+
+            // Add final edge
+            aligner.add_edge(curr_node_id, ABPOA_SINK_NODE_ID as i32);
+
+            //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+
+            let mut query_bseq: Vec<u8> = query
+                .chars()
+                .map(|c| *(AbpoaAligner::NT4_TABLE).get(c as usize).unwrap())
+                .collect();
+
+            let mut res = abpoa_res_t {
+                n_cigar: 0,
+                m_cigar: 0,
+                graph_cigar: vec![].as_mut_ptr(),
+                node_s: 0,
+                node_e: 0,
+                query_s: 0,
+                query_e: 0,
+                n_aln_bases: 0,
+                n_matched_bases: 0,
+                best_score: 0,
+            };
+            abpoa_align_sequence_to_graph(
+                aligner.ab,
+                aligner.abpt,
+                query_bseq.as_mut_ptr(),
+                query.len() as i32,
+                &mut res,
+            );
+
+            // Create variables to store aln result
+            let mut abpoa_ids: Vec<u64> = Vec::new();
+            let mut graph_ids: Vec<usize> = Vec::new();
+            let mut cigar_vec: Vec<char> = Vec::new();
+
+            // Navigate the cigar
+            let mut op: u32 = 0;
+            let mut op_char = ' ';
+            let mut node_id: u64 = 0;
+            for i in 0..res.n_cigar {
+                let curr_cigar = res.graph_cigar.add(i as usize);
+                op = (*curr_cigar & 0xf) as u32;
+
+                op_char = match op {
+                    ABPOA_CMATCH => 'M',
+                    ABPOA_CINS => 'I',
+                    ABPOA_CDEL => 'D',
+                    ABPOA_CDIFF => 'X',
+                    ABPOA_CSOFT_CLIP => 'S',
+                    ABPOA_CHARD_CLIP => 'H',
+                    _ => ' ',
+                };
+
+                node_id = (*curr_cigar >> 34) & 0x3fffffff;
+
+                //println!("Node id {} type {}", node_id, op_char);
+
+                abpoa_ids.push(node_id);
+                cigar_vec.push(op_char);
+            }
+
+            // Compact cigar
+            let mut cigar_string = String::new();
+            if !cigar_vec.is_empty() {
+                let mut last_char = ' ';
+                let mut count = 0;
+
+                for char in cigar_vec {
+                    if char != last_char {
+                        if last_char != ' ' {
+                            // This is the initial delimiter
+                            cigar_string.push_str(&mut format!("{}{}", count, last_char));
+                        }
+                        last_char = char;
+                        count = 1;
+                    } else {
+                        count += 1;
+                    }
+                }
+
+                cigar_string.push_str(&mut format!("{}{}", count, last_char));
+            }
+
+            AbpoaAlignmentResult::new_with_params(cigar_string.as_str(), abpoa_ids, graph_ids)
         }
     }
 }
