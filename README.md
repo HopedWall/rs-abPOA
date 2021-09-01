@@ -1,7 +1,6 @@
 # rs-abPOA
-Rust bindings for the abPOA partial order aligner
-(https://github.com/yangao07/abPOA). 
-Works only under *NIX systems.
+Rust bindings for the [abPOA partial order aligner](https://github.com/yangao07/abPOA). 
+Only works under *NIX systems.
 
 ## Contents
 There are two modules in this crate:
@@ -47,7 +46,7 @@ let mut aligner = AbpoaAligner::new_with_example_params();
 // Create this graph: "ACG" -> "AAA"
 aligner.add_nodes_edges(&vec!["ACG", "AAA"], &vec![(0, 1)]);
 
-// Align "ATG" to the graph defined above
+// Align "ACG" to the graph defined above
 let res = aligner.align_sequence("ACG");
 ```
 
