@@ -19,6 +19,7 @@ pub struct AbpoaAligner {
     // this does not consider the initial and final edge, however this should not
     // cause any issue
     edges: Vec<(usize, usize)>,
+    edges_abpoa: Vec<(i32, i32)>,
 }
 
 pub struct AbpoaMSA {
@@ -100,6 +101,7 @@ impl AbpoaAligner {
             n_nodes: 0,
             nodes: vec![],
             edges: vec![],
+            edges_abpoa: vec![],
         }
     }
 
@@ -324,11 +326,13 @@ impl AbpoaAligner {
                 0,
                 0,
             );
+            self.edges_abpoa
+                .push((*w.get(0).unwrap(), *w.get(1).unwrap()));
         });
 
         // Update wrapper data
         self.n_nodes += seq.len();
-        self.nodes.push(ids);
+        self.nodes.push(ids.clone());
     }
 
     pub unsafe fn add_node(&mut self, base: u8) -> i32 {
@@ -337,6 +341,7 @@ impl AbpoaAligner {
 
     pub unsafe fn add_edge(&mut self, from_node_id: i32, to_node_id: i32) {
         abpoa_add_graph_edge((*self.ab).abg, from_node_id, to_node_id, 0, 1, 0, 0, 0);
+        self.edges_abpoa.push((from_node_id, to_node_id));
     }
 
     pub unsafe fn add_nodes_edges(&mut self, nodes: &Vec<&str>, edges: &Vec<(usize, usize)>) {
@@ -352,30 +357,74 @@ impl AbpoaAligner {
         });
 
         if self.n_nodes > 0 {
-            // Add initial edge -- ABPOA_SRC_NODE_ID has node id 0
-            abpoa_add_graph_edge(
-                (*self.ab).abg,
-                ABPOA_SRC_NODE_ID as i32,
-                *self.nodes.first().unwrap().first().unwrap(),
-                0,
-                1,
-                0,
-                0,
-                0,
-            );
+            let heads: Vec<i32> = self.find_heads();
+            println!("Heads are: {:#?}", heads);
+            for head in heads {
+                // Add initial edge -- ABPOA_SRC_NODE_ID has node id 0
+                abpoa_add_graph_edge(
+                    (*self.ab).abg,
+                    ABPOA_SRC_NODE_ID as i32,
+                    head,
+                    0,
+                    1,
+                    0,
+                    0,
+                    0,
+                );
+                self.edges_abpoa.push((ABPOA_SRC_NODE_ID as i32, head));
+            }
 
-            // Add last edge -- ABPOA_SINK_NODE_ID has node id 1
-            abpoa_add_graph_edge(
-                (*self.ab).abg,
-                *self.nodes.last().unwrap().last().unwrap(),
-                ABPOA_SINK_NODE_ID as i32,
-                0,
-                1,
-                0,
-                0,
-                0,
-            );
+            let tails: Vec<i32> = self.find_tails();
+            println!("Tails are: {:#?}", tails);
+            for tail in tails {
+                // Add initial edge -- ABPOA_SRC_NODE_ID has node id 0
+                abpoa_add_graph_edge(
+                    (*self.ab).abg,
+                    tail,
+                    ABPOA_SINK_NODE_ID as i32,
+                    0,
+                    1,
+                    0,
+                    0,
+                    0,
+                );
+                self.edges_abpoa.push((tail, ABPOA_SINK_NODE_ID as i32));
+            }
         }
+    }
+
+    pub unsafe fn find_heads(&self) -> Vec<i32> {
+        let heads = self
+            .nodes
+            .clone()
+            .into_iter()
+            .flatten()
+            .filter(|abpoa_node| self.is_head(abpoa_node))
+            .collect();
+
+        heads
+    }
+
+    fn is_head(&self, node: &i32) -> bool {
+        let node_appears_as_end_edge = self.edges_abpoa.iter().any(|x| x.1 == *node);
+        return !node_appears_as_end_edge;
+    }
+
+    pub unsafe fn find_tails(&self) -> Vec<i32> {
+        let tails = self
+            .nodes
+            .clone()
+            .into_iter()
+            .flatten()
+            .filter(|abpoa_node| self.is_tail(abpoa_node))
+            .collect();
+
+        tails
+    }
+
+    fn is_tail(&self, node: &i32) -> bool {
+        let node_appears_as_start_edge = self.edges_abpoa.iter().any(|x| x.0 == *node);
+        return !node_appears_as_start_edge;
     }
 
     pub unsafe fn align_sequence(&mut self, seq: &str) -> AbpoaAlignmentResult {
@@ -908,6 +957,60 @@ mod tests {
             }
 
             AbpoaAlignmentResult::new_with_params(cigar_string.as_str(), abpoa_ids, graph_ids)
+        }
+    }
+
+    #[test]
+    fn add_complex_graph_1() {
+        unsafe {
+            let mut aligner = AbpoaAligner::new_with_example_params();
+            aligner.add_nodes_edges(&vec!["ACG", "AAA"], &vec![(0, 1)]);
+            abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+        }
+    }
+
+    #[test]
+    fn add_complex_graph_2() {
+        unsafe {
+            let mut aligner = AbpoaAligner::new_with_example_params();
+            aligner.add_nodes_edges(&vec!["ACG", "AAA", "CC"], &vec![(0, 1)]);
+            abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+        }
+    }
+
+    #[test]
+    fn add_complex_graph_3() {
+        unsafe {
+            let mut aligner = AbpoaAligner::new_with_example_params();
+            let nodes: Vec<&str> = vec![
+                "A", "G", "AAAT", "AA", "TTTCT", "GG", "AGTTCTAT", "A", "T", "ATAT", "A", "T",
+            ];
+            //AAA
+            let edges: Vec<(usize, usize)> = vec![
+                (0, 2),
+                (1, 2),
+                (2, 3),
+                (2, 4),
+                (3, 4),
+                (4, 5),
+                (4, 6),
+                (5, 6),
+                (6, 7),
+                (6, 8),
+                (7, 9),
+                (8, 9),
+                (9, 10),
+                (9, 11),
+            ];
+            //(0,1), (7,8), (10,11)];
+            aligner.add_nodes_edges(&nodes, &edges);
+            println!("Nodes: {:?}", aligner.nodes);
+            println!("Edges: {:?}", aligner.edges);
+            println!("Edges_abpoa: {:?}", aligner.edges_abpoa);
+            //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+
+            let result = aligner.align_sequence("GAAAT");
+            println!("Result is: {:#?}", result);
         }
     }
 }
