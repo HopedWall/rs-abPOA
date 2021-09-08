@@ -73,6 +73,13 @@ pub struct AbpoaAlignmentResult {
     pub cigar: String,
     pub abpoa_nodes: Vec<u64>,
     pub graph_nodes: Vec<usize>,
+    pub node_s: i32,
+    pub node_e: i32,
+    pub query_s: i32,
+    pub query_e: i32,
+    pub n_aligned_bases: i32,
+    pub n_matched_bases: i32,
+    pub best_score: i32
 }
 
 impl AbpoaAlignmentResult {
@@ -81,14 +88,29 @@ impl AbpoaAlignmentResult {
             cigar: "".to_string(),
             abpoa_nodes: vec![],
             graph_nodes: vec![],
+            node_s: 0,
+            node_e: 0,
+            query_s: 0,
+            query_e: 0,
+            n_aligned_bases: 0,
+            n_matched_bases: 0,
+            best_score: 0
         }
     }
 
-    pub fn new_with_params(cigar: &str, abpoa_nodes: Vec<u64>, graph_nodes: Vec<usize>) -> Self {
+
+    pub fn new_with_params(cigar: &str, abpoa_nodes: Vec<u64>, graph_nodes: Vec<usize>, res: &abpoa_res_t) -> Self {
         AbpoaAlignmentResult {
             cigar: cigar.to_string(),
             abpoa_nodes,
             graph_nodes,
+            node_s: res.node_s,
+            node_e: res.node_e,
+            query_s: res.query_s,
+            query_e: res.query_e,
+            n_aligned_bases: res.n_aln_bases,
+            n_matched_bases: res.n_matched_bases,
+            best_score: res.best_score
         }
     }
 }
@@ -358,7 +380,7 @@ impl AbpoaAligner {
 
         if self.n_nodes > 0 {
             let heads: Vec<i32> = self.find_heads();
-            println!("Heads are: {:#?}", heads);
+            //println!("Heads are: {:#?}", heads);
             for head in heads {
                 // Add initial edge -- ABPOA_SRC_NODE_ID has node id 0
                 abpoa_add_graph_edge(
@@ -375,7 +397,7 @@ impl AbpoaAligner {
             }
 
             let tails: Vec<i32> = self.find_tails();
-            println!("Tails are: {:#?}", tails);
+            //println!("Tails are: {:#?}", tails);
             for tail in tails {
                 // Add initial edge -- ABPOA_SRC_NODE_ID has node id 0
                 abpoa_add_graph_edge(
@@ -512,7 +534,7 @@ impl AbpoaAligner {
             }
         }
 
-        AbpoaAlignmentResult::new_with_params(cigar_string.as_str(), abpoa_ids, graph_ids)
+        AbpoaAlignmentResult::new_with_params(cigar_string.as_str(), abpoa_ids, graph_ids, &res)
     }
 }
 
@@ -817,7 +839,7 @@ mod tests {
                 cigar_string.push_str(&mut format!("{}{}", count, last_char));
             }
 
-            AbpoaAlignmentResult::new_with_params(cigar_string.as_str(), abpoa_ids, graph_ids)
+            AbpoaAlignmentResult::new_with_params(cigar_string.as_str(), abpoa_ids, graph_ids, &res)
         }
     }
 
@@ -956,7 +978,7 @@ mod tests {
                 cigar_string.push_str(&mut format!("{}{}", count, last_char));
             }
 
-            AbpoaAlignmentResult::new_with_params(cigar_string.as_str(), abpoa_ids, graph_ids)
+            AbpoaAlignmentResult::new_with_params(cigar_string.as_str(), abpoa_ids, graph_ids, &res)
         }
     }
 
@@ -983,24 +1005,11 @@ mod tests {
         unsafe {
             let mut aligner = AbpoaAligner::new_with_example_params();
             let nodes: Vec<&str> = vec![
-                "A", "G", "AAAT", "AA", "TTTCT", "GG", "AGTTCTAT", "A", "T", "ATAT", "A", "T",
+                "A", "G", "AAAT", "AA", "TTTCT", "GG", "AGTTCTAT", "A", "T", "ATAT", "A", "T"
             ];
-            //AAA
+
             let edges: Vec<(usize, usize)> = vec![
-                (0, 2),
-                (1, 2),
-                (2, 3),
-                (2, 4),
-                (3, 4),
-                (4, 5),
-                (4, 6),
-                (5, 6),
-                (6, 7),
-                (6, 8),
-                (7, 9),
-                (8, 9),
-                (9, 10),
-                (9, 11),
+                (0, 2), (1, 2), (2, 3), (2, 4), (3, 4), (4, 5), (4, 6), (5, 6), (6, 7), (6, 8), (7, 9), (8, 9), (9, 10), (9, 11)
             ];
             //(0,1), (7,8), (10,11)];
             aligner.add_nodes_edges(&nodes, &edges);
@@ -1009,7 +1018,7 @@ mod tests {
             println!("Edges_abpoa: {:?}", aligner.edges_abpoa);
             //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
 
-            let result = aligner.align_sequence("GAAAT");
+            let result = aligner.align_sequence("AAATTTGGCAT");
             println!("Result is: {:#?}", result);
         }
     }
