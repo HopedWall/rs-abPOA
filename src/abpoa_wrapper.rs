@@ -529,7 +529,7 @@ impl AbpoaAligner {
         }
 
         // TODO -- this is probably a bottleneck
-        println!("abpoa_ids: {:#?}", abpoa_ids);
+        //println!("abpoa_ids: {:#?}", abpoa_ids);
         if !abpoa_ids.is_empty() {
             let mut curr_node_index: usize = 0;
             let mut curr_node_internal_index: usize = 0;
@@ -1060,13 +1060,13 @@ mod tests {
             ];
             //(0,1), (7,8), (10,11)];
             aligner.add_nodes_edges(&nodes, &edges);
-            println!("Nodes: {:?}", aligner.nodes);
-            println!("Edges: {:?}", aligner.edges);
-            println!("Edges_abpoa: {:?}", aligner.edges_abpoa);
+            //println!("Nodes: {:?}", aligner.nodes);
+            //println!("Edges: {:?}", aligner.edges);
+            //println!("Edges_abpoa: {:?}", aligner.edges_abpoa);
             //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
 
             let result = aligner.align_sequence("AAATTTGGCAT");
-            println!("Result is: {:#?}", result);
+            //println!("Result is: {:#?}", result);
 
             assert_eq!(
                 result.abpoa_nodes,

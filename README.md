@@ -52,6 +52,6 @@ let res = aligner.align_sequence("ACG");
 
 ## TODOs
 - [X] Raw bindings and wrapper
+- [X] Find a more efficient way to abpoa_id -> graph_id
 - [ ] Build abPOA from source
 - [ ] Limit unsafe usage
-- [ ] Find a more efficient way to abpoa_id -> graph_id
