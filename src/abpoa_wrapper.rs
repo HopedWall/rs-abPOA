@@ -4,6 +4,8 @@ use crate::abpoa::{
     abpoa_t, free, strdup, ABPOA_CDEL, ABPOA_CDIFF, ABPOA_CHARD_CLIP, ABPOA_CINS, ABPOA_CMATCH,
     ABPOA_CSOFT_CLIP, ABPOA_SINK_NODE_ID, ABPOA_SRC_NODE_ID, FILE,
 };
+use rayon::prelude::*;
+use std::collections::HashMap;
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int};
 use std::ptr;
@@ -477,15 +479,21 @@ impl AbpoaAligner {
             &mut res,
         );
 
+        // Build a HashMap having as keys the abpoa_ids and as values
+        // the abstraction_id, this will be useful when doing the conversion
+        // TODO: would like to use rayon but it does not like the .get()
+        let mut abpoa_id_to_abstraction_id: HashMap<u64, usize> = HashMap::new();
+        for abstraction_id in 0..self.nodes.len() {
+            for abpoa_id in self.nodes.get(abstraction_id).unwrap() {
+                abpoa_id_to_abstraction_id.insert(*abpoa_id as u64, abstraction_id);
+            }
+        }
+
         // Create variables to store aln result
         let mut abpoa_ids: Vec<u64> = Vec::new();
-        let mut graph_ids: Vec<usize> = Vec::new();
         let mut cigar_vec: Vec<char> = Vec::new();
 
         // Navigate the cigar
-        //let mut op: u32 = 0;
-        //let mut op_char = ' ';
-        //let mut node_id: u64 = 0;
         for i in 0..res.n_cigar {
             let curr_cigar = res.graph_cigar.add(i as usize);
             let op = (*curr_cigar & 0xf) as u32;
@@ -502,9 +510,20 @@ impl AbpoaAligner {
 
             let node_id = (*curr_cigar >> 34) & 0x3fffffff;
 
-            abpoa_ids.push(node_id);
-            cigar_vec.push(op_char);
+            // Necessary because sometimes abpoa returns weird nodes
+            // TODO: figure out why this happens
+            if abpoa_id_to_abstraction_id.contains_key(&node_id) && op_char != ' ' {
+                abpoa_ids.push(node_id);
+                cigar_vec.push(op_char);
+            }
         }
+
+        // Convert abpoa_ids to abstraction_ids
+        let graph_ids: Vec<usize> = abpoa_ids
+            .par_iter()
+            .filter_map(|id| abpoa_id_to_abstraction_id.get(id))
+            .map(|id| *id)
+            .collect();
 
         // Compact cigar
         let mut cigar_string = String::new();
@@ -515,7 +534,7 @@ impl AbpoaAligner {
             for char in cigar_vec {
                 if char != last_char {
                     if last_char != ' ' {
-                        // This is the initial delimiter
+                        // This is the initial delimiter for this loop
                         cigar_string.push_str(&mut format!("{}{}", count, last_char));
                     }
                     last_char = char;
@@ -528,45 +547,7 @@ impl AbpoaAligner {
             cigar_string.push_str(&mut format!("{}{}", count, last_char));
         }
 
-        // TODO -- this is probably a bottleneck
-        //println!("abpoa_ids: {:#?}", abpoa_ids);
-        if !abpoa_ids.is_empty() {
-            let mut curr_node_index: usize = 0;
-            let mut curr_node_internal_index: usize = 0;
-            let mut curr_node = self.nodes.get(curr_node_index).unwrap();
-
-            // We want to convert each abpoa_id (returned from abPOA in C) into
-            // a node id of our abstraction. Remember that in the Rust bindings,
-            // a node can be labelled with a seq of arbitrary length, while in
-            // C each node is 1-seq long.
-            for abpoa_id in &abpoa_ids {
-
-                // Continue until the first matching node (in the abstraction) is found
-                while *abpoa_id != *curr_node.get(curr_node_internal_index).unwrap() as u64 {
-                    if curr_node_internal_index == curr_node.len() - 1 {
-                        curr_node_index += 1;
-                        curr_node_internal_index = 0;
-                        curr_node = self.nodes.get(curr_node_index).unwrap();
-                    } else {
-                        curr_node_internal_index += 1;
-                    }
-                }
-
-                graph_ids.push(curr_node_index);
-            }
-        }
-
         assert_eq!(abpoa_ids.len(), graph_ids.len());
-
-        /* -- previous version of abpoa_id -> abstraction_id, ignore --
-        for graph_id in 0..self.nodes.len() {
-            for id in self.nodes.get(graph_id).unwrap() {
-                if abpoa_ids.contains(&(*id as u64)) {
-                    graph_ids.push(graph_id);
-                }
-            }
-        }
-         */
 
         AbpoaAlignmentResult::new_with_params(cigar_string.as_str(), abpoa_ids, graph_ids, &res)
     }
