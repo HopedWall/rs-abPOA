@@ -79,7 +79,7 @@ pub struct AbpoaAlignmentResult {
     pub query_e: i32,
     pub n_aligned_bases: i32,
     pub n_matched_bases: i32,
-    pub best_score: i32
+    pub best_score: i32,
 }
 
 impl AbpoaAlignmentResult {
@@ -94,12 +94,16 @@ impl AbpoaAlignmentResult {
             query_e: 0,
             n_aligned_bases: 0,
             n_matched_bases: 0,
-            best_score: 0
+            best_score: 0,
         }
     }
 
-
-    pub fn new_with_params(cigar: &str, abpoa_nodes: Vec<u64>, graph_nodes: Vec<usize>, res: &abpoa_res_t) -> Self {
+    pub fn new_with_params(
+        cigar: &str,
+        abpoa_nodes: Vec<u64>,
+        graph_nodes: Vec<usize>,
+        res: &abpoa_res_t,
+    ) -> Self {
         AbpoaAlignmentResult {
             cigar: cigar.to_string(),
             abpoa_nodes,
@@ -110,7 +114,7 @@ impl AbpoaAlignmentResult {
             query_e: res.query_e,
             n_aligned_bases: res.n_aln_bases,
             n_matched_bases: res.n_matched_bases,
-            best_score: res.best_score
+            best_score: res.best_score,
         }
     }
 }
@@ -525,7 +529,36 @@ impl AbpoaAligner {
         }
 
         // TODO -- this is probably a bottleneck
-        // Now obtain graph ids
+        println!("abpoa_ids: {:#?}", abpoa_ids);
+        if !abpoa_ids.is_empty() {
+            let mut curr_node_index: usize = 0;
+            let mut curr_node_internal_index: usize = 0;
+            let mut curr_node = self.nodes.get(curr_node_index).unwrap();
+
+            // We want to convert each abpoa_id (returned from abPOA in C) into
+            // a node id of our abstraction. Remember that in the Rust bindings,
+            // a node can be labelled with a seq of arbitrary length, while in
+            // C each node is 1-seq long.
+            for abpoa_id in &abpoa_ids {
+
+                // Continue until the first matching node (in the abstraction) is found
+                while *abpoa_id != *curr_node.get(curr_node_internal_index).unwrap() as u64 {
+                    if curr_node_internal_index == curr_node.len() - 1 {
+                        curr_node_index += 1;
+                        curr_node_internal_index = 0;
+                        curr_node = self.nodes.get(curr_node_index).unwrap();
+                    } else {
+                        curr_node_internal_index += 1;
+                    }
+                }
+
+                graph_ids.push(curr_node_index);
+            }
+        }
+
+        assert_eq!(abpoa_ids.len(), graph_ids.len());
+
+        /* -- previous version of abpoa_id -> abstraction_id, ignore --
         for graph_id in 0..self.nodes.len() {
             for id in self.nodes.get(graph_id).unwrap() {
                 if abpoa_ids.contains(&(*id as u64)) {
@@ -533,6 +566,7 @@ impl AbpoaAligner {
                 }
             }
         }
+         */
 
         AbpoaAlignmentResult::new_with_params(cigar_string.as_str(), abpoa_ids, graph_ids, &res)
     }
@@ -1005,11 +1039,24 @@ mod tests {
         unsafe {
             let mut aligner = AbpoaAligner::new_with_example_params();
             let nodes: Vec<&str> = vec![
-                "A", "G", "AAAT", "AA", "TTTCT", "GG", "AGTTCTAT", "A", "T", "ATAT", "A", "T"
+                "A", "G", "AAAT", "AA", "TTTCT", "GG", "AGTTCTAT", "A", "T", "ATAT", "A", "T",
             ];
 
             let edges: Vec<(usize, usize)> = vec![
-                (0, 2), (1, 2), (2, 3), (2, 4), (3, 4), (4, 5), (4, 6), (5, 6), (6, 7), (6, 8), (7, 9), (8, 9), (9, 10), (9, 11)
+                (0, 2),
+                (1, 2),
+                (2, 3),
+                (2, 4),
+                (3, 4),
+                (4, 5),
+                (4, 6),
+                (5, 6),
+                (6, 7),
+                (6, 8),
+                (7, 9),
+                (8, 9),
+                (9, 10),
+                (9, 11),
             ];
             //(0,1), (7,8), (10,11)];
             aligner.add_nodes_edges(&nodes, &edges);
@@ -1020,6 +1067,19 @@ mod tests {
 
             let result = aligner.align_sequence("AAATTTGGCAT");
             println!("Result is: {:#?}", result);
+
+            assert_eq!(
+                result.abpoa_nodes,
+                vec![
+                    2, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+                    27, 28, 29, 30, 31
+                ]
+            );
+
+            assert_eq!(
+                result.graph_nodes,
+                vec![0, 2, 2, 2, 2, 4, 4, 4, 4, 4, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 7, 9, 9, 9, 9, 10]
+            );
         }
     }
 }
