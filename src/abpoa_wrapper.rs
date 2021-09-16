@@ -565,7 +565,7 @@ impl AbpoaAligner {
             cigar_string.push_str(&mut format!("{}{}", count, last_char));
 
             // Obtain cs string
-            let mut match_count = 0;
+            let mut match_count = 1;
             let mut tmp_string: String = String::new();
             last_char = ' ';
             let mut char = ' ';
@@ -584,7 +584,7 @@ impl AbpoaAligner {
                     }
                     last_char = char;
                     // Reset tmp variables
-                    match_count = 0;
+                    match_count = 1;
                     tmp_string = String::new();
                 } else {
                     match char {
