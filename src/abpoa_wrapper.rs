@@ -18,6 +18,8 @@ pub struct AbpoaAligner {
     // TODO: fix this
     n_nodes: usize,
     nodes: Vec<Vec<i32>>,
+    nodes_str: HashMap<i32, char>,
+
     // this does not consider the initial and final edge, however this should not
     // cause any issue
     edges: Vec<(usize, usize)>,
@@ -73,7 +75,7 @@ impl AbpoaCons {
 #[derive(Debug)]
 pub struct AbpoaAlignmentResult {
     pub cigar: String,
-    pub abpoa_nodes: Vec<u64>,
+    pub abpoa_nodes: Vec<i32>,
     pub graph_nodes: Vec<usize>,
     pub node_s: i32,
     pub node_e: i32,
@@ -83,6 +85,7 @@ pub struct AbpoaAlignmentResult {
     pub n_matched_bases: i32,
     pub best_score: i32,
     pub cigar_vec: Vec<char>,
+    pub cs_string: String,
 }
 
 impl AbpoaAlignmentResult {
@@ -99,15 +102,17 @@ impl AbpoaAlignmentResult {
             n_matched_bases: 0,
             best_score: 0,
             cigar_vec: vec![],
+            cs_string: "".to_string(),
         }
     }
 
     pub fn new_with_params(
         cigar: &str,
-        abpoa_nodes: Vec<u64>,
+        abpoa_nodes: Vec<i32>,
         graph_nodes: Vec<usize>,
         res: &abpoa_res_t,
         cigar_vec: Vec<char>,
+        cs_string: &str,
     ) -> Self {
         AbpoaAlignmentResult {
             cigar: cigar.to_string(),
@@ -121,6 +126,7 @@ impl AbpoaAlignmentResult {
             n_matched_bases: res.n_matched_bases,
             best_score: res.best_score,
             cigar_vec,
+            cs_string: cs_string.to_string(),
         }
     }
 }
@@ -132,6 +138,7 @@ impl AbpoaAligner {
             abpt: abpoa_init_para(),
             n_nodes: 0,
             nodes: vec![],
+            nodes_str: HashMap::new(),
             edges: vec![],
             edges_abpoa: vec![],
         }
@@ -346,6 +353,13 @@ impl AbpoaAligner {
             .map(|s| abpoa_add_graph_node((*self.ab).abg, s))
             .collect();
 
+        assert_eq!(seq.len(), ids.len());
+        for i in 0..ids.len() {
+            let id = ids.get(i).unwrap();
+            let seq = seq.chars().nth(i).unwrap();
+            self.nodes_str.insert(*id, seq);
+        }
+
         //Then add the edges between said nodes
         ids.windows(2).for_each(|w| {
             abpoa_add_graph_edge(
@@ -486,15 +500,15 @@ impl AbpoaAligner {
         // Build a HashMap having as keys the abpoa_ids and as values
         // the abstraction_id, this will be useful when doing the conversion
         // TODO: would like to use rayon but it does not like the .get()
-        let mut abpoa_id_to_abstraction_id: HashMap<u64, usize> = HashMap::new();
+        let mut abpoa_id_to_abstraction_id: HashMap<i32, usize> = HashMap::new();
         for abstraction_id in 0..self.nodes.len() {
             for abpoa_id in self.nodes.get(abstraction_id).unwrap() {
-                abpoa_id_to_abstraction_id.insert(*abpoa_id as u64, abstraction_id);
+                abpoa_id_to_abstraction_id.insert(*abpoa_id, abstraction_id);
             }
         }
 
         // Create variables to store aln result
-        let mut abpoa_ids: Vec<u64> = Vec::new();
+        let mut abpoa_ids: Vec<i32> = Vec::new();
         let mut cigar_vec: Vec<char> = Vec::new();
 
         // Navigate the cigar
@@ -512,7 +526,7 @@ impl AbpoaAligner {
                 _ => ' ',
             };
 
-            let node_id = (*curr_cigar >> 34) & 0x3fffffff;
+            let node_id: i32 = ((*curr_cigar >> 34) & 0x3fffffff) as i32;
 
             // Necessary because sometimes abpoa returns weird nodes
             // TODO: figure out why this happens
@@ -529,12 +543,13 @@ impl AbpoaAligner {
             .map(|id| *id)
             .collect();
 
-        // Compact cigar
         let mut cigar_string = String::new();
+        let mut cs_string = String::from("cs:Z::");
         if !cigar_vec.is_empty() {
             let mut last_char = ' ';
             let mut count = 0;
 
+            // Convert cigar to string
             for char in &cigar_vec {
                 if *char != last_char {
                     if last_char != ' ' {
@@ -547,8 +562,41 @@ impl AbpoaAligner {
                     count += 1;
                 }
             }
-
             cigar_string.push_str(&mut format!("{}{}", count, last_char));
+
+            // Obtain cs string
+            let mut match_count = 0;
+            let mut tmp_string: String = String::new();
+            last_char = ' ';
+            for i in 0..cigar_vec.len() {
+                let char = cigar_vec.get(i).unwrap();
+
+                if *char != last_char {
+                    if last_char != ' ' {
+                        // This is the initial delimiter for this loop
+                        match last_char {
+                            'M' => cs_string.push_str(&mut format!("{}", match_count)),
+                            'I' => cs_string.push_str(&mut format!("{}{}", '-', tmp_string)),
+                            'D' => cs_string.push_str(&mut format!("{}{}", '+', tmp_string)),
+                            _ => (),
+                        }
+                    }
+                    last_char = *char;
+                    // Reset tmp variables
+                    match_count = 0;
+                    tmp_string = String::new();
+                } else {
+                    match char {
+                        'M' => match_count += 1,
+                        'I' => tmp_string.push(seq.char_indices().nth(i).unwrap().1),
+                        'D' => {
+                            let id = abpoa_ids.get(i).unwrap();
+                            tmp_string.push(*self.nodes_str.get(id).unwrap())
+                        }
+                        _ => (),
+                    }
+                }
+            }
         }
 
         assert_eq!(abpoa_ids.len(), graph_ids.len());
@@ -559,6 +607,7 @@ impl AbpoaAligner {
             graph_ids,
             &res,
             cigar_vec,
+            cs_string.as_str(),
         )
     }
 }
@@ -813,14 +862,14 @@ mod tests {
             );
 
             // Create variables to store aln result
-            let mut abpoa_ids: Vec<u64> = Vec::new();
+            let mut abpoa_ids: Vec<i32> = Vec::new();
             let mut graph_ids: Vec<usize> = Vec::new();
             let mut cigar_vec: Vec<char> = Vec::new();
 
             // Navigate the cigar
             let mut op: u32 = 0;
             let mut op_char = ' ';
-            let mut node_id: u64 = 0;
+            let mut node_id: i32 = 0;
             for i in 0..res.n_cigar {
                 let curr_cigar = res.graph_cigar.add(i as usize);
                 op = (*curr_cigar & 0xf) as u32;
@@ -835,7 +884,7 @@ mod tests {
                     _ => ' ',
                 };
 
-                node_id = (*curr_cigar >> 34) & 0x3fffffff;
+                node_id = ((*curr_cigar >> 34) & 0x3fffffff) as i32;
                 abpoa_ids.push(node_id);
                 cigar_vec.push(op_char);
             }
@@ -870,6 +919,7 @@ mod tests {
                 graph_ids,
                 &res,
                 cigar_vec,
+                String::new().as_str(),
             )
         }
     }
@@ -957,14 +1007,14 @@ mod tests {
             );
 
             // Create variables to store aln result
-            let mut abpoa_ids: Vec<u64> = Vec::new();
+            let mut abpoa_ids: Vec<i32> = Vec::new();
             let mut graph_ids: Vec<usize> = Vec::new();
             let mut cigar_vec: Vec<char> = Vec::new();
 
             // Navigate the cigar
             let mut op: u32 = 0;
             let mut op_char = ' ';
-            let mut node_id: u64 = 0;
+            let mut node_id: i32 = 0;
             for i in 0..res.n_cigar {
                 let curr_cigar = res.graph_cigar.add(i as usize);
                 op = (*curr_cigar & 0xf) as u32;
@@ -979,7 +1029,7 @@ mod tests {
                     _ => ' ',
                 };
 
-                node_id = (*curr_cigar >> 34) & 0x3fffffff;
+                node_id = ((*curr_cigar >> 34) & 0x3fffffff) as i32;
 
                 //println!("Node id {} type {}", node_id, op_char);
 
@@ -1015,6 +1065,7 @@ mod tests {
                 graph_ids,
                 &res,
                 cigar_vec,
+                String::new().as_str(),
             )
         }
     }
@@ -1069,7 +1120,7 @@ mod tests {
             //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
 
             let result = aligner.align_sequence("AAATTTGGCAT");
-            //println!("Result is: {:#?}", result);
+            println!("Result is: {:#?}", result);
 
             assert_eq!(
                 result.abpoa_nodes,
