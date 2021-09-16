@@ -82,6 +82,7 @@ pub struct AbpoaAlignmentResult {
     pub n_aligned_bases: i32,
     pub n_matched_bases: i32,
     pub best_score: i32,
+    pub cigar_vec: Vec<char>,
 }
 
 impl AbpoaAlignmentResult {
@@ -97,6 +98,7 @@ impl AbpoaAlignmentResult {
             n_aligned_bases: 0,
             n_matched_bases: 0,
             best_score: 0,
+            cigar_vec: vec![],
         }
     }
 
@@ -105,6 +107,7 @@ impl AbpoaAlignmentResult {
         abpoa_nodes: Vec<u64>,
         graph_nodes: Vec<usize>,
         res: &abpoa_res_t,
+        cigar_vec: Vec<char>,
     ) -> Self {
         AbpoaAlignmentResult {
             cigar: cigar.to_string(),
@@ -117,6 +120,7 @@ impl AbpoaAlignmentResult {
             n_aligned_bases: res.n_aln_bases,
             n_matched_bases: res.n_matched_bases,
             best_score: res.best_score,
+            cigar_vec,
         }
     }
 }
@@ -531,13 +535,13 @@ impl AbpoaAligner {
             let mut last_char = ' ';
             let mut count = 0;
 
-            for char in cigar_vec {
-                if char != last_char {
+            for char in &cigar_vec {
+                if *char != last_char {
                     if last_char != ' ' {
                         // This is the initial delimiter for this loop
                         cigar_string.push_str(&mut format!("{}{}", count, last_char));
                     }
-                    last_char = char;
+                    last_char = *char;
                     count = 1;
                 } else {
                     count += 1;
@@ -549,7 +553,13 @@ impl AbpoaAligner {
 
         assert_eq!(abpoa_ids.len(), graph_ids.len());
 
-        AbpoaAlignmentResult::new_with_params(cigar_string.as_str(), abpoa_ids, graph_ids, &res)
+        AbpoaAlignmentResult::new_with_params(
+            cigar_string.as_str(),
+            abpoa_ids,
+            graph_ids,
+            &res,
+            cigar_vec,
+        )
     }
 }
 
@@ -838,13 +848,13 @@ mod tests {
                 let mut last_char = ' ';
                 let mut count = 0;
 
-                for char in cigar_vec {
-                    if char != last_char {
+                for char in &cigar_vec {
+                    if *char != last_char {
                         if last_char != ' ' {
                             // This is the initial delimiter
                             cigar_string.push_str(&mut format!("{}{}", count, last_char));
                         }
-                        last_char = char;
+                        last_char = *char;
                         count = 1;
                     } else {
                         count += 1;
@@ -854,7 +864,13 @@ mod tests {
                 cigar_string.push_str(&mut format!("{}{}", count, last_char));
             }
 
-            AbpoaAlignmentResult::new_with_params(cigar_string.as_str(), abpoa_ids, graph_ids, &res)
+            AbpoaAlignmentResult::new_with_params(
+                cigar_string.as_str(),
+                abpoa_ids,
+                graph_ids,
+                &res,
+                cigar_vec,
+            )
         }
     }
 
@@ -977,13 +993,13 @@ mod tests {
                 let mut last_char = ' ';
                 let mut count = 0;
 
-                for char in cigar_vec {
-                    if char != last_char {
+                for char in &cigar_vec {
+                    if *char != last_char {
                         if last_char != ' ' {
                             // This is the initial delimiter
                             cigar_string.push_str(&mut format!("{}{}", count, last_char));
                         }
-                        last_char = char;
+                        last_char = *char;
                         count = 1;
                     } else {
                         count += 1;
@@ -993,7 +1009,13 @@ mod tests {
                 cigar_string.push_str(&mut format!("{}{}", count, last_char));
             }
 
-            AbpoaAlignmentResult::new_with_params(cigar_string.as_str(), abpoa_ids, graph_ids, &res)
+            AbpoaAlignmentResult::new_with_params(
+                cigar_string.as_str(),
+                abpoa_ids,
+                graph_ids,
+                &res,
+                cigar_vec,
+            )
         }
     }
 
