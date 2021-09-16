@@ -568,10 +568,11 @@ impl AbpoaAligner {
             let mut match_count = 0;
             let mut tmp_string: String = String::new();
             last_char = ' ';
+            let mut char = ' ';
             for i in 0..cigar_vec.len() {
-                let char = cigar_vec.get(i).unwrap();
+                char = *cigar_vec.get(i).unwrap();
 
-                if *char != last_char {
+                if char != last_char {
                     if last_char != ' ' {
                         // This is the initial delimiter for this loop
                         match last_char {
@@ -581,7 +582,7 @@ impl AbpoaAligner {
                             _ => (),
                         }
                     }
-                    last_char = *char;
+                    last_char = char;
                     // Reset tmp variables
                     match_count = 0;
                     tmp_string = String::new();
@@ -597,6 +598,14 @@ impl AbpoaAligner {
                     }
                 }
             }
+
+            match char {
+                'M' => cs_string.push_str(&mut format!("{}", match_count)),
+                'I' => cs_string.push_str(&mut format!("{}{}", '-', tmp_string)),
+                'D' => cs_string.push_str(&mut format!("{}{}", '+', tmp_string)),
+                _ => (),
+            }
+
         }
 
         assert_eq!(abpoa_ids.len(), graph_ids.len());
