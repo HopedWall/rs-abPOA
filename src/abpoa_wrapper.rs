@@ -19,6 +19,7 @@ pub struct AbpoaAligner {
     n_nodes: usize,
     nodes: Vec<Vec<i32>>,
     nodes_str: HashMap<i32, char>,
+    abpoa_id_to_abstraction_id: HashMap<i32, usize>,
 
     // this does not consider the initial and final edge, however this should not
     // cause any issue
@@ -141,6 +142,7 @@ impl AbpoaAligner {
             nodes_str: HashMap::new(),
             edges: vec![],
             edges_abpoa: vec![],
+            abpoa_id_to_abstraction_id: HashMap::new(),
         }
     }
 
@@ -436,6 +438,15 @@ impl AbpoaAligner {
                 );
                 self.edges_abpoa.push((tail, ABPOA_SINK_NODE_ID as i32));
             }
+
+            // Build a HashMap having as keys the abpoa_ids and as values
+            // the abstraction_id, this will be useful when doing the conversion
+            // TODO: would like to use rayon but it does not like the .get()
+            for abstraction_id in 0..self.nodes.len() {
+                for abpoa_id in self.nodes.get(abstraction_id).unwrap() {
+                    self.abpoa_id_to_abstraction_id.insert(*abpoa_id, abstraction_id);
+                }
+            }
         }
     }
 
@@ -497,16 +508,6 @@ impl AbpoaAligner {
             &mut res,
         );
 
-        // Build a HashMap having as keys the abpoa_ids and as values
-        // the abstraction_id, this will be useful when doing the conversion
-        // TODO: would like to use rayon but it does not like the .get()
-        let mut abpoa_id_to_abstraction_id: HashMap<i32, usize> = HashMap::new();
-        for abstraction_id in 0..self.nodes.len() {
-            for abpoa_id in self.nodes.get(abstraction_id).unwrap() {
-                abpoa_id_to_abstraction_id.insert(*abpoa_id, abstraction_id);
-            }
-        }
-
         // Create variables to store aln result
         let mut abpoa_ids: Vec<i32> = Vec::new();
         let mut cigar_vec: Vec<char> = Vec::new();
@@ -530,7 +531,7 @@ impl AbpoaAligner {
 
             // Necessary because sometimes abpoa returns weird nodes
             // TODO: figure out why this happens
-            if abpoa_id_to_abstraction_id.contains_key(&node_id) && op_char != ' ' {
+            if self.abpoa_id_to_abstraction_id.contains_key(&node_id) && op_char != ' ' {
                 abpoa_ids.push(node_id);
                 cigar_vec.push(op_char);
             }
@@ -538,8 +539,8 @@ impl AbpoaAligner {
 
         // Convert abpoa_ids to abstraction_ids
         let graph_ids: Vec<usize> = abpoa_ids
-            .par_iter()
-            .filter_map(|id| abpoa_id_to_abstraction_id.get(id))
+            .iter()
+            .filter_map(|id| self.abpoa_id_to_abstraction_id.get(id))
             .map(|id| *id)
             .collect();
 
