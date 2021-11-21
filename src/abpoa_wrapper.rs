@@ -10,6 +10,10 @@ use std::ffi::CString;
 use std::os::raw::{c_char, c_int};
 use std::ptr;
 
+use log::{info, warn};
+use std::env;
+use std::time::Instant;
+
 pub struct AbpoaAligner {
     ab: *mut abpoa_t,
     abpt: *mut abpoa_para_t,
@@ -393,8 +397,13 @@ impl AbpoaAligner {
     }
 
     pub unsafe fn add_nodes_edges(&mut self, nodes: &Vec<&str>, edges: &Vec<(usize, usize)>) {
+        let start_add_nodes = Instant::now();
         // Add nodes
         nodes.iter().for_each(|n| self.add_nodes_from_seq(n));
+        info!(
+            "Adding the nodes took: {} ms",
+            start_add_nodes.elapsed().as_millis()
+        );
 
         // Add edges between nodes
         edges.iter().for_each(|e| {
@@ -404,6 +413,7 @@ impl AbpoaAligner {
             self.add_edge(last_of_start_node, first_of_end_node);
         });
 
+        let start_head_tails = Instant::now();
         if self.n_nodes > 0 {
             let heads: Vec<i32> = self.find_heads();
             //println!("Heads are: {:#?}", heads);
@@ -438,15 +448,25 @@ impl AbpoaAligner {
                 );
                 self.edges_abpoa.push((tail, ABPOA_SINK_NODE_ID as i32));
             }
+            info!(
+                "Finding heads and tails took: {} ms",
+                start_head_tails.elapsed().as_millis()
+            );
 
+            let start_map_creation = Instant::now();
             // Build a HashMap having as keys the abpoa_ids and as values
             // the abstraction_id, this will be useful when doing the conversion
             // TODO: would like to use rayon but it does not like the .get()
             for abstraction_id in 0..self.nodes.len() {
                 for abpoa_id in self.nodes.get(abstraction_id).unwrap() {
-                    self.abpoa_id_to_abstraction_id.insert(*abpoa_id, abstraction_id);
+                    self.abpoa_id_to_abstraction_id
+                        .insert(*abpoa_id, abstraction_id);
                 }
             }
+            info!(
+                "Creating the map took: {} ms",
+                start_map_creation.elapsed().as_millis()
+            );
         }
     }
 
@@ -606,7 +626,6 @@ impl AbpoaAligner {
                 'D' => cs_string.push_str(&mut format!("{}{}", '+', tmp_string)),
                 _ => (),
             }
-
         }
 
         assert_eq!(abpoa_ids.len(), graph_ids.len());
