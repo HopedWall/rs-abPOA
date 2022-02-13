@@ -1,2 +1,2 @@
-#include "abpoa-headers/abpoa.h"
-#include "abpoa-headers/simd_instruction.h"
+#include "abPOA/src/abpoa.h"
+#include "abPOA/src/simd_instruction.h"

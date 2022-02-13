@@ -248,6 +248,142 @@ pub const _THREAD_MUTEX_INTERNAL_H: u32 = 1;
 pub const __PTHREAD_MUTEX_HAVE_PREV: u32 = 1;
 pub const __have_pthread_attr_t: u32 = 1;
 pub const _ALLOCA_H: u32 = 1;
+pub const _ERRNO_H: u32 = 1;
+pub const _BITS_ERRNO_H: u32 = 1;
+pub const EPERM: u32 = 1;
+pub const ENOENT: u32 = 2;
+pub const ESRCH: u32 = 3;
+pub const EINTR: u32 = 4;
+pub const EIO: u32 = 5;
+pub const ENXIO: u32 = 6;
+pub const E2BIG: u32 = 7;
+pub const ENOEXEC: u32 = 8;
+pub const EBADF: u32 = 9;
+pub const ECHILD: u32 = 10;
+pub const EAGAIN: u32 = 11;
+pub const ENOMEM: u32 = 12;
+pub const EACCES: u32 = 13;
+pub const EFAULT: u32 = 14;
+pub const ENOTBLK: u32 = 15;
+pub const EBUSY: u32 = 16;
+pub const EEXIST: u32 = 17;
+pub const EXDEV: u32 = 18;
+pub const ENODEV: u32 = 19;
+pub const ENOTDIR: u32 = 20;
+pub const EISDIR: u32 = 21;
+pub const EINVAL: u32 = 22;
+pub const ENFILE: u32 = 23;
+pub const EMFILE: u32 = 24;
+pub const ENOTTY: u32 = 25;
+pub const ETXTBSY: u32 = 26;
+pub const EFBIG: u32 = 27;
+pub const ENOSPC: u32 = 28;
+pub const ESPIPE: u32 = 29;
+pub const EROFS: u32 = 30;
+pub const EMLINK: u32 = 31;
+pub const EPIPE: u32 = 32;
+pub const EDOM: u32 = 33;
+pub const ERANGE: u32 = 34;
+pub const EDEADLK: u32 = 35;
+pub const ENAMETOOLONG: u32 = 36;
+pub const ENOLCK: u32 = 37;
+pub const ENOSYS: u32 = 38;
+pub const ENOTEMPTY: u32 = 39;
+pub const ELOOP: u32 = 40;
+pub const EWOULDBLOCK: u32 = 11;
+pub const ENOMSG: u32 = 42;
+pub const EIDRM: u32 = 43;
+pub const ECHRNG: u32 = 44;
+pub const EL2NSYNC: u32 = 45;
+pub const EL3HLT: u32 = 46;
+pub const EL3RST: u32 = 47;
+pub const ELNRNG: u32 = 48;
+pub const EUNATCH: u32 = 49;
+pub const ENOCSI: u32 = 50;
+pub const EL2HLT: u32 = 51;
+pub const EBADE: u32 = 52;
+pub const EBADR: u32 = 53;
+pub const EXFULL: u32 = 54;
+pub const ENOANO: u32 = 55;
+pub const EBADRQC: u32 = 56;
+pub const EBADSLT: u32 = 57;
+pub const EDEADLOCK: u32 = 35;
+pub const EBFONT: u32 = 59;
+pub const ENOSTR: u32 = 60;
+pub const ENODATA: u32 = 61;
+pub const ETIME: u32 = 62;
+pub const ENOSR: u32 = 63;
+pub const ENONET: u32 = 64;
+pub const ENOPKG: u32 = 65;
+pub const EREMOTE: u32 = 66;
+pub const ENOLINK: u32 = 67;
+pub const EADV: u32 = 68;
+pub const ESRMNT: u32 = 69;
+pub const ECOMM: u32 = 70;
+pub const EPROTO: u32 = 71;
+pub const EMULTIHOP: u32 = 72;
+pub const EDOTDOT: u32 = 73;
+pub const EBADMSG: u32 = 74;
+pub const EOVERFLOW: u32 = 75;
+pub const ENOTUNIQ: u32 = 76;
+pub const EBADFD: u32 = 77;
+pub const EREMCHG: u32 = 78;
+pub const ELIBACC: u32 = 79;
+pub const ELIBBAD: u32 = 80;
+pub const ELIBSCN: u32 = 81;
+pub const ELIBMAX: u32 = 82;
+pub const ELIBEXEC: u32 = 83;
+pub const EILSEQ: u32 = 84;
+pub const ERESTART: u32 = 85;
+pub const ESTRPIPE: u32 = 86;
+pub const EUSERS: u32 = 87;
+pub const ENOTSOCK: u32 = 88;
+pub const EDESTADDRREQ: u32 = 89;
+pub const EMSGSIZE: u32 = 90;
+pub const EPROTOTYPE: u32 = 91;
+pub const ENOPROTOOPT: u32 = 92;
+pub const EPROTONOSUPPORT: u32 = 93;
+pub const ESOCKTNOSUPPORT: u32 = 94;
+pub const EOPNOTSUPP: u32 = 95;
+pub const EPFNOSUPPORT: u32 = 96;
+pub const EAFNOSUPPORT: u32 = 97;
+pub const EADDRINUSE: u32 = 98;
+pub const EADDRNOTAVAIL: u32 = 99;
+pub const ENETDOWN: u32 = 100;
+pub const ENETUNREACH: u32 = 101;
+pub const ENETRESET: u32 = 102;
+pub const ECONNABORTED: u32 = 103;
+pub const ECONNRESET: u32 = 104;
+pub const ENOBUFS: u32 = 105;
+pub const EISCONN: u32 = 106;
+pub const ENOTCONN: u32 = 107;
+pub const ESHUTDOWN: u32 = 108;
+pub const ETOOMANYREFS: u32 = 109;
+pub const ETIMEDOUT: u32 = 110;
+pub const ECONNREFUSED: u32 = 111;
+pub const EHOSTDOWN: u32 = 112;
+pub const EHOSTUNREACH: u32 = 113;
+pub const EALREADY: u32 = 114;
+pub const EINPROGRESS: u32 = 115;
+pub const ESTALE: u32 = 116;
+pub const EUCLEAN: u32 = 117;
+pub const ENOTNAM: u32 = 118;
+pub const ENAVAIL: u32 = 119;
+pub const EISNAM: u32 = 120;
+pub const EREMOTEIO: u32 = 121;
+pub const EDQUOT: u32 = 122;
+pub const ENOMEDIUM: u32 = 123;
+pub const EMEDIUMTYPE: u32 = 124;
+pub const ECANCELED: u32 = 125;
+pub const ENOKEY: u32 = 126;
+pub const EKEYEXPIRED: u32 = 127;
+pub const EKEYREVOKED: u32 = 128;
+pub const EKEYREJECTED: u32 = 129;
+pub const EOWNERDEAD: u32 = 130;
+pub const ENOTRECOVERABLE: u32 = 131;
+pub const ERFKILL: u32 = 132;
+pub const EHWPOISON: u32 = 133;
+pub const ENOTSUP: u32 = 95;
 pub const _MM_HINT_ET0: u32 = 7;
 pub const _MM_HINT_ET1: u32 = 6;
 pub const _MM_HINT_T0: u32 = 3;
@@ -374,176 +510,6 @@ pub const TMP_MAX: u32 = 238328;
 pub const FILENAME_MAX: u32 = 4096;
 pub const L_ctermid: u32 = 9;
 pub const FOPEN_MAX: u32 = 16;
-pub const signature_AMD_ebx: u32 = 1752462657;
-pub const signature_AMD_edx: u32 = 1769238117;
-pub const signature_AMD_ecx: u32 = 1145913699;
-pub const signature_CENTAUR_ebx: u32 = 1953391939;
-pub const signature_CENTAUR_edx: u32 = 1215460705;
-pub const signature_CENTAUR_ecx: u32 = 1936487777;
-pub const signature_CYRIX_ebx: u32 = 1769109827;
-pub const signature_CYRIX_edx: u32 = 1936607608;
-pub const signature_CYRIX_ecx: u32 = 1684104564;
-pub const signature_INTEL_ebx: u32 = 1970169159;
-pub const signature_INTEL_edx: u32 = 1231384169;
-pub const signature_INTEL_ecx: u32 = 1818588270;
-pub const signature_TM1_ebx: u32 = 1851880020;
-pub const signature_TM1_edx: u32 = 1952804211;
-pub const signature_TM1_ecx: u32 = 1431323489;
-pub const signature_TM2_ebx: u32 = 1970169159;
-pub const signature_TM2_edx: u32 = 1415933545;
-pub const signature_TM2_ecx: u32 = 909670477;
-pub const signature_NSC_ebx: u32 = 1685022023;
-pub const signature_NSC_edx: u32 = 2036473957;
-pub const signature_NSC_ecx: u32 = 1129532960;
-pub const signature_NEXGEN_ebx: u32 = 1199072590;
-pub const signature_NEXGEN_edx: u32 = 1917087333;
-pub const signature_NEXGEN_ecx: u32 = 1852143209;
-pub const signature_RISE_ebx: u32 = 1702062418;
-pub const signature_RISE_edx: u32 = 1702062418;
-pub const signature_RISE_ecx: u32 = 1702062418;
-pub const signature_SIS_ebx: u32 = 542337363;
-pub const signature_SIS_edx: u32 = 542337363;
-pub const signature_SIS_ecx: u32 = 542337363;
-pub const signature_UMC_ebx: u32 = 541281621;
-pub const signature_UMC_edx: u32 = 541281621;
-pub const signature_UMC_ecx: u32 = 541281621;
-pub const signature_VIA_ebx: u32 = 541149526;
-pub const signature_VIA_edx: u32 = 541149526;
-pub const signature_VIA_ecx: u32 = 541149526;
-pub const signature_VORTEX_ebx: u32 = 1953656662;
-pub const signature_VORTEX_edx: u32 = 909670501;
-pub const signature_VORTEX_ecx: u32 = 1131369248;
-pub const bit_SSE3: u32 = 1;
-pub const bit_PCLMULQDQ: u32 = 2;
-pub const bit_PCLMUL: u32 = 2;
-pub const bit_DTES64: u32 = 4;
-pub const bit_MONITOR: u32 = 8;
-pub const bit_DSCPL: u32 = 16;
-pub const bit_VMX: u32 = 32;
-pub const bit_SMX: u32 = 64;
-pub const bit_EIST: u32 = 128;
-pub const bit_TM2: u32 = 256;
-pub const bit_SSSE3: u32 = 512;
-pub const bit_CNXTID: u32 = 1024;
-pub const bit_FMA: u32 = 4096;
-pub const bit_CMPXCHG16B: u32 = 8192;
-pub const bit_xTPR: u32 = 16384;
-pub const bit_PDCM: u32 = 32768;
-pub const bit_PCID: u32 = 131072;
-pub const bit_DCA: u32 = 262144;
-pub const bit_SSE41: u32 = 524288;
-pub const bit_SSE4_1: u32 = 524288;
-pub const bit_SSE42: u32 = 1048576;
-pub const bit_SSE4_2: u32 = 1048576;
-pub const bit_x2APIC: u32 = 2097152;
-pub const bit_MOVBE: u32 = 4194304;
-pub const bit_POPCNT: u32 = 8388608;
-pub const bit_TSCDeadline: u32 = 16777216;
-pub const bit_AESNI: u32 = 33554432;
-pub const bit_AES: u32 = 33554432;
-pub const bit_XSAVE: u32 = 67108864;
-pub const bit_OSXSAVE: u32 = 134217728;
-pub const bit_AVX: u32 = 268435456;
-pub const bit_F16C: u32 = 536870912;
-pub const bit_RDRND: u32 = 1073741824;
-pub const bit_FPU: u32 = 1;
-pub const bit_VME: u32 = 2;
-pub const bit_DE: u32 = 4;
-pub const bit_PSE: u32 = 8;
-pub const bit_TSC: u32 = 16;
-pub const bit_MSR: u32 = 32;
-pub const bit_PAE: u32 = 64;
-pub const bit_MCE: u32 = 128;
-pub const bit_CX8: u32 = 256;
-pub const bit_CMPXCHG8B: u32 = 256;
-pub const bit_APIC: u32 = 512;
-pub const bit_SEP: u32 = 2048;
-pub const bit_MTRR: u32 = 4096;
-pub const bit_PGE: u32 = 8192;
-pub const bit_MCA: u32 = 16384;
-pub const bit_CMOV: u32 = 32768;
-pub const bit_PAT: u32 = 65536;
-pub const bit_PSE36: u32 = 131072;
-pub const bit_PSN: u32 = 262144;
-pub const bit_CLFSH: u32 = 524288;
-pub const bit_DS: u32 = 2097152;
-pub const bit_ACPI: u32 = 4194304;
-pub const bit_MMX: u32 = 8388608;
-pub const bit_FXSR: u32 = 16777216;
-pub const bit_FXSAVE: u32 = 16777216;
-pub const bit_SSE: u32 = 33554432;
-pub const bit_SSE2: u32 = 67108864;
-pub const bit_SS: u32 = 134217728;
-pub const bit_HTT: u32 = 268435456;
-pub const bit_TM: u32 = 536870912;
-pub const bit_PBE: u32 = 2147483648;
-pub const bit_FSGSBASE: u32 = 1;
-pub const bit_SGX: u32 = 4;
-pub const bit_BMI: u32 = 8;
-pub const bit_HLE: u32 = 16;
-pub const bit_AVX2: u32 = 32;
-pub const bit_SMEP: u32 = 128;
-pub const bit_BMI2: u32 = 256;
-pub const bit_ENH_MOVSB: u32 = 512;
-pub const bit_INVPCID: u32 = 1024;
-pub const bit_RTM: u32 = 2048;
-pub const bit_MPX: u32 = 16384;
-pub const bit_AVX512F: u32 = 65536;
-pub const bit_AVX512DQ: u32 = 131072;
-pub const bit_RDSEED: u32 = 262144;
-pub const bit_ADX: u32 = 524288;
-pub const bit_AVX512IFMA: u32 = 2097152;
-pub const bit_CLFLUSHOPT: u32 = 8388608;
-pub const bit_CLWB: u32 = 16777216;
-pub const bit_AVX512PF: u32 = 67108864;
-pub const bit_AVX512ER: u32 = 134217728;
-pub const bit_AVX512CD: u32 = 268435456;
-pub const bit_SHA: u32 = 536870912;
-pub const bit_AVX512BW: u32 = 1073741824;
-pub const bit_AVX512VL: u32 = 2147483648;
-pub const bit_PREFTCHWT1: u32 = 1;
-pub const bit_AVX512VBMI: u32 = 2;
-pub const bit_PKU: u32 = 4;
-pub const bit_OSPKE: u32 = 16;
-pub const bit_WAITPKG: u32 = 32;
-pub const bit_AVX512VBMI2: u32 = 64;
-pub const bit_SHSTK: u32 = 128;
-pub const bit_GFNI: u32 = 256;
-pub const bit_VAES: u32 = 512;
-pub const bit_VPCLMULQDQ: u32 = 1024;
-pub const bit_AVX512VNNI: u32 = 2048;
-pub const bit_AVX512BITALG: u32 = 4096;
-pub const bit_AVX512VPOPCNTDQ: u32 = 16384;
-pub const bit_RDPID: u32 = 4194304;
-pub const bit_CLDEMOTE: u32 = 33554432;
-pub const bit_MOVDIRI: u32 = 134217728;
-pub const bit_MOVDIR64B: u32 = 268435456;
-pub const bit_ENQCMD: u32 = 536870912;
-pub const bit_AVX5124VNNIW: u32 = 4;
-pub const bit_AVX5124FMAPS: u32 = 8;
-pub const bit_PCONFIG: u32 = 262144;
-pub const bit_IBT: u32 = 1048576;
-pub const bit_AVX512BF16: u32 = 32;
-pub const bit_XSAVEOPT: u32 = 1;
-pub const bit_XSAVEC: u32 = 2;
-pub const bit_XSAVES: u32 = 8;
-pub const bit_PTWRITE: u32 = 16;
-pub const bit_LAHF_LM: u32 = 1;
-pub const bit_ABM: u32 = 32;
-pub const bit_LZCNT: u32 = 32;
-pub const bit_SSE4a: u32 = 64;
-pub const bit_PRFCHW: u32 = 256;
-pub const bit_XOP: u32 = 2048;
-pub const bit_LWP: u32 = 32768;
-pub const bit_FMA4: u32 = 65536;
-pub const bit_TBM: u32 = 2097152;
-pub const bit_MWAITX: u32 = 536870912;
-pub const bit_MMXEXT: u32 = 4194304;
-pub const bit_LM: u32 = 536870912;
-pub const bit_3DNOWP: u32 = 1073741824;
-pub const bit_3DNOW: u32 = 2147483648;
-pub const bit_CLZERO: u32 = 1;
-pub const bit_WBNOINVD: u32 = 512;
 pub const _STRING_H: u32 = 1;
 pub const _BITS_TYPES_LOCALE_T_H: u32 = 1;
 pub const _BITS_TYPES___LOCALE_T_H: u32 = 1;
@@ -580,9 +546,9 @@ pub const ABPOA_OUT_MSA: u32 = 1;
 pub const ABPOA_OUT_CONS_MSA: u32 = 2;
 pub const ABPOA_OUT_GFA: u32 = 3;
 pub const ABPOA_OUT_CONS_GFA: u32 = 4;
+pub const ABPOA_OUT_CONS_FQ: u32 = 5;
 pub const ABPOA_HB: u32 = 0;
 pub const ABPOA_HC: u32 = 1;
-pub const ABPOA_MF: u32 = 2;
 pub type __u_char = ::std::os::raw::c_uchar;
 pub type __u_short = ::std::os::raw::c_ushort;
 pub type __u_int = ::std::os::raw::c_uint;
@@ -690,16 +656,6 @@ pub type uint_fast32_t = ::std::os::raw::c_ulong;
 pub type uint_fast64_t = ::std::os::raw::c_ulong;
 pub type intmax_t = __intmax_t;
 pub type uintmax_t = __uintmax_t;
-pub type __m64 = [::std::os::raw::c_longlong; 1usize];
-pub type __v1di = [::std::os::raw::c_longlong; 1usize];
-pub type __v2si = [::std::os::raw::c_int; 2usize];
-pub type __v4hi = [::std::os::raw::c_short; 4usize];
-pub type __v8qi = [::std::os::raw::c_char; 8usize];
-pub type __v4si = [::std::os::raw::c_int; 4usize];
-pub type __v4sf = [f32; 4usize];
-pub type __m128 = [f32; 4usize];
-pub type __m128_u = [f32; 4usize];
-pub type __v4su = [::std::os::raw::c_uint; 4usize];
 pub type size_t = ::std::os::raw::c_ulong;
 pub type wchar_t = ::std::os::raw::c_int;
 pub const idtype_t_P_ALL: idtype_t = 0;
@@ -2684,6 +2640,19 @@ extern "C" {
         -> ::std::os::raw::c_int;
 }
 extern "C" {
+    pub fn __errno_location() -> *mut ::std::os::raw::c_int;
+}
+pub type __m64 = [::std::os::raw::c_longlong; 1usize];
+pub type __v1di = [::std::os::raw::c_longlong; 1usize];
+pub type __v2si = [::std::os::raw::c_int; 2usize];
+pub type __v4hi = [::std::os::raw::c_short; 4usize];
+pub type __v8qi = [::std::os::raw::c_char; 8usize];
+pub type __v4si = [::std::os::raw::c_int; 4usize];
+pub type __v4sf = [f32; 4usize];
+pub type __m128 = [f32; 4usize];
+pub type __m128_u = [f32; 4usize];
+pub type __v4su = [::std::os::raw::c_uint; 4usize];
+extern "C" {
     pub fn _mm_sfence();
 }
 extern "C" {
@@ -4377,9 +4346,6 @@ extern "C" {
 }
 pub type SIMDf = __m128;
 pub type SIMDi = __m128i;
-extern "C" {
-    pub fn simd_check() -> ::std::os::raw::c_int;
-}
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct abpoa_res_t {
@@ -4512,6 +4478,7 @@ fn bindgen_test_layout_abpoa_res_t() {
 pub struct abpoa_para_t {
     pub m: ::std::os::raw::c_int,
     pub mat: *mut ::std::os::raw::c_int,
+    pub mat_fn: *mut ::std::os::raw::c_char,
     pub use_score_matrix: ::std::os::raw::c_int,
     pub match_: ::std::os::raw::c_int,
     pub max_mat: ::std::os::raw::c_int,
@@ -4529,7 +4496,6 @@ pub struct abpoa_para_t {
     pub wf: f32,
     pub zdrop: ::std::os::raw::c_int,
     pub end_bonus: ::std::os::raw::c_int,
-    pub simd_flag: ::std::os::raw::c_int,
     pub _bitfield_1: __BindgenBitfieldUnit<[u8; 2usize], u8>,
     pub incr_fn: *mut ::std::os::raw::c_char,
     pub out_pog: *mut ::std::os::raw::c_char,
@@ -4571,8 +4537,18 @@ fn bindgen_test_layout_abpoa_para_t() {
         )
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<abpoa_para_t>())).use_score_matrix as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<abpoa_para_t>())).mat_fn as *const _ as usize },
         16usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(abpoa_para_t),
+            "::",
+            stringify!(mat_fn)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<abpoa_para_t>())).use_score_matrix as *const _ as usize },
+        24usize,
         concat!(
             "Offset of field: ",
             stringify!(abpoa_para_t),
@@ -4582,7 +4558,7 @@ fn bindgen_test_layout_abpoa_para_t() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<abpoa_para_t>())).match_ as *const _ as usize },
-        20usize,
+        28usize,
         concat!(
             "Offset of field: ",
             stringify!(abpoa_para_t),
@@ -4592,7 +4568,7 @@ fn bindgen_test_layout_abpoa_para_t() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<abpoa_para_t>())).max_mat as *const _ as usize },
-        24usize,
+        32usize,
         concat!(
             "Offset of field: ",
             stringify!(abpoa_para_t),
@@ -4602,7 +4578,7 @@ fn bindgen_test_layout_abpoa_para_t() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<abpoa_para_t>())).mismatch as *const _ as usize },
-        28usize,
+        36usize,
         concat!(
             "Offset of field: ",
             stringify!(abpoa_para_t),
@@ -4612,7 +4588,7 @@ fn bindgen_test_layout_abpoa_para_t() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<abpoa_para_t>())).min_mis as *const _ as usize },
-        32usize,
+        40usize,
         concat!(
             "Offset of field: ",
             stringify!(abpoa_para_t),
@@ -4622,7 +4598,7 @@ fn bindgen_test_layout_abpoa_para_t() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<abpoa_para_t>())).gap_open1 as *const _ as usize },
-        36usize,
+        44usize,
         concat!(
             "Offset of field: ",
             stringify!(abpoa_para_t),
@@ -4632,7 +4608,7 @@ fn bindgen_test_layout_abpoa_para_t() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<abpoa_para_t>())).gap_open2 as *const _ as usize },
-        40usize,
+        48usize,
         concat!(
             "Offset of field: ",
             stringify!(abpoa_para_t),
@@ -4642,7 +4618,7 @@ fn bindgen_test_layout_abpoa_para_t() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<abpoa_para_t>())).gap_ext1 as *const _ as usize },
-        44usize,
+        52usize,
         concat!(
             "Offset of field: ",
             stringify!(abpoa_para_t),
@@ -4652,7 +4628,7 @@ fn bindgen_test_layout_abpoa_para_t() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<abpoa_para_t>())).gap_ext2 as *const _ as usize },
-        48usize,
+        56usize,
         concat!(
             "Offset of field: ",
             stringify!(abpoa_para_t),
@@ -4662,7 +4638,7 @@ fn bindgen_test_layout_abpoa_para_t() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<abpoa_para_t>())).inf_min as *const _ as usize },
-        52usize,
+        60usize,
         concat!(
             "Offset of field: ",
             stringify!(abpoa_para_t),
@@ -4672,7 +4648,7 @@ fn bindgen_test_layout_abpoa_para_t() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<abpoa_para_t>())).k as *const _ as usize },
-        56usize,
+        64usize,
         concat!(
             "Offset of field: ",
             stringify!(abpoa_para_t),
@@ -4682,7 +4658,7 @@ fn bindgen_test_layout_abpoa_para_t() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<abpoa_para_t>())).w as *const _ as usize },
-        60usize,
+        68usize,
         concat!(
             "Offset of field: ",
             stringify!(abpoa_para_t),
@@ -4692,7 +4668,7 @@ fn bindgen_test_layout_abpoa_para_t() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<abpoa_para_t>())).min_w as *const _ as usize },
-        64usize,
+        72usize,
         concat!(
             "Offset of field: ",
             stringify!(abpoa_para_t),
@@ -4702,7 +4678,7 @@ fn bindgen_test_layout_abpoa_para_t() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<abpoa_para_t>())).wb as *const _ as usize },
-        68usize,
+        76usize,
         concat!(
             "Offset of field: ",
             stringify!(abpoa_para_t),
@@ -4712,7 +4688,7 @@ fn bindgen_test_layout_abpoa_para_t() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<abpoa_para_t>())).wf as *const _ as usize },
-        72usize,
+        80usize,
         concat!(
             "Offset of field: ",
             stringify!(abpoa_para_t),
@@ -4722,7 +4698,7 @@ fn bindgen_test_layout_abpoa_para_t() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<abpoa_para_t>())).zdrop as *const _ as usize },
-        76usize,
+        84usize,
         concat!(
             "Offset of field: ",
             stringify!(abpoa_para_t),
@@ -4732,22 +4708,12 @@ fn bindgen_test_layout_abpoa_para_t() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<abpoa_para_t>())).end_bonus as *const _ as usize },
-        80usize,
+        88usize,
         concat!(
             "Offset of field: ",
             stringify!(abpoa_para_t),
             "::",
             stringify!(end_bonus)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<abpoa_para_t>())).simd_flag as *const _ as usize },
-        84usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(abpoa_para_t),
-            "::",
-            stringify!(simd_flag)
         )
     );
     assert_eq!(
@@ -4934,6 +4900,17 @@ impl abpoa_para_t {
         }
     }
     #[inline]
+    pub fn out_fq(&self) -> u8 {
+        unsafe { ::std::mem::transmute(self._bitfield_1.get(11usize, 1u8) as u8) }
+    }
+    #[inline]
+    pub fn set_out_fq(&mut self, val: u8) {
+        unsafe {
+            let val: u8 = ::std::mem::transmute(val);
+            self._bitfield_1.set(11usize, 1u8, val as u64)
+        }
+    }
+    #[inline]
     pub fn new_bitfield_1(
         ret_cigar: u8,
         rev_cigar: u8,
@@ -4946,6 +4923,7 @@ impl abpoa_para_t {
         amb_strand: u8,
         disable_seeding: u8,
         progressive_poa: u8,
+        out_fq: u8,
     ) -> __BindgenBitfieldUnit<[u8; 2usize], u8> {
         let mut __bindgen_bitfield_unit: __BindgenBitfieldUnit<[u8; 2usize], u8> =
             Default::default();
@@ -4992,6 +4970,10 @@ impl abpoa_para_t {
         __bindgen_bitfield_unit.set(10usize, 1u8, {
             let progressive_poa: u8 = unsafe { ::std::mem::transmute(progressive_poa) };
             progressive_poa as u64
+        });
+        __bindgen_bitfield_unit.set(11usize, 1u8, {
+            let out_fq: u8 = unsafe { ::std::mem::transmute(out_fq) };
+            out_fq as u64
         });
         __bindgen_bitfield_unit
     }
@@ -5664,7 +5646,7 @@ extern "C" {
     pub fn abpoa_init_para() -> *mut abpoa_para_t;
 }
 extern "C" {
-    pub fn abpoa_set_mat_from_file(abpt: *mut abpoa_para_t, mtx_fn: *mut ::std::os::raw::c_char);
+    pub fn abpoa_set_mat_from_file(abpt: *mut abpoa_para_t, mat_fn: *mut ::std::os::raw::c_char);
 }
 extern "C" {
     pub fn abpoa_post_set_para(abpt: *mut abpoa_para_t);

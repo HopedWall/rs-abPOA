@@ -212,6 +212,24 @@ impl AbpoaAligner {
         4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
         4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
     ];
+    const NT256_TABLE: [char; 256] = [
+    'A', 'C', 'G', 'T',  'N', '-', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
+    'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', '-',  'N', 'N', 'N', 'N',
+    'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
+    'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
+    'N', 'A', 'N', 'C',  'N', 'N', 'N', 'G',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
+    'N', 'N', 'N', 'N',  'T', 'T', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
+    'N', 'A', 'N', 'C',  'N', 'N', 'N', 'G',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
+    'N', 'N', 'N', 'N',  'T', 'T', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
+    'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
+    'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
+    'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
+    'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
+    'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
+    'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
+    'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
+    'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N'
+    ];
     const ALN_ALPHABET: [char; 6] = ['A', 'C', 'G', 'T', 'N', '-'];
     const CONS_ALPHABET: [char; 5] = ['A', 'C', 'G', 'T', 'N'];
 
@@ -265,11 +283,11 @@ impl AbpoaAligner {
         let mut msa: Vec<String> = Vec::new();
         for i in 0..n_seqs {
             let mut curr_aln = String::with_capacity(msa_l as usize);
-            let outer_pointer = *msa_seq.add((i) as usize);
+            let outer_pointer = *msa_seq.add(i as usize);
             for j in 0..msa_l {
                 let inner_pointer = *(outer_pointer.add(j as usize));
                 curr_aln.push(
-                    *AbpoaAligner::ALN_ALPHABET
+                    *AbpoaAligner::NT256_TABLE
                         .get(inner_pointer as usize)
                         .unwrap(),
                 );
@@ -328,7 +346,7 @@ impl AbpoaAligner {
                 let outer_pointer = *cons_seq.add(i as usize);
                 let inner_pointer = *(outer_pointer.add(j as usize));
                 cons.push(
-                    *AbpoaAligner::CONS_ALPHABET
+                    *AbpoaAligner::NT256_TABLE
                         .get(inner_pointer as usize)
                         .unwrap(),
                 );
@@ -662,7 +680,7 @@ mod tests {
                 "CGTCAATCTATCGGTAAAGCATACGCTCTGTAGCCGAAGACCTCGGCAATCAC",
                 "CGTCAATCTATCTTCAAGCATACGCGGCAGAGCCGAAGACCTCGGCAATC",
                 "CGTCAATGGATCGAGTACGCGGCAGAGCCGAAGACCTCGGCAATCAC",
-                "CGTCAATCTAATCGAAGCATACGCGGCAGAGCCGTCTACCTCGGCAATCACGT",
+                "CGTCAATCTAATCGAAGCATACGCGGCAGAGCCGTCTACCTCGGCAATCACGT"
             ]
             .to_vec();
 
