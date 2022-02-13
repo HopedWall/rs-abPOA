@@ -5,6 +5,7 @@ use std::process::Command;
 
 fn main() {
 
+    // use make to build abPOA
     Command::new("make")
         .arg("-C")
         .arg("abPOA")
