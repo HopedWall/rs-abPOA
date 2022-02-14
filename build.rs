@@ -14,7 +14,7 @@ fn main() {
 
     // include abpoa (-L ./lib -labpoa)
     println!("cargo:rustc-link-search=abPOA/lib");
-    println!("cargo:rustc-link-lib=static=abpoa");
+    println!("cargo:rustc-link-lib=abpoa");
 
     // include z library (-lz)
     println!("cargo:rustc-link-lib=z");
