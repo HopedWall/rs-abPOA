@@ -3,6 +3,7 @@ name = "ab_poa"
 version = "1.5.0"
 authors = ["Francesco Porto <francesco.porto97@gmail.com>"]
 edition = "2018"
+links = "abpoa"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
