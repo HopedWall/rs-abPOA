@@ -10,6 +10,7 @@ links = "abpoa"
 [build-dependencies]
 bindgen = "0.53.1"
 pkg-config = "0.3.16"
+cmake = "0.1"
 
 [dependencies]
 rayon = "1.5.1"

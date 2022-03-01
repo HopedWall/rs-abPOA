@@ -1,10 +1,12 @@
 extern crate bindgen;
 
 use std::path::PathBuf;
-use std::process::Command;
+//use std::process::Command;
+use cmake;
 
 fn main() {
 
+    /*
     // use make to build abPOA
     let abpoa_dir = format!("{}/{}",env!("CARGO_MANIFEST_DIR"), "abPOA");
     let abpoa_lib = format!("{}/{}",abpoa_dir, "lib");
@@ -18,6 +20,14 @@ fn main() {
     // include abpoa (-L ./lib -labpoa)
     println!("cargo:rustc-link-search={}", abpoa_lib);
     println!("cargo:rustc-link-lib=abpoa");
+     */
+
+    // Builds the project in the directory located in `libfoo`, installing it
+    // into $OUT_DIR
+    let dst = cmake::build("abPOA");
+
+    println!("cargo:rustc-link-search=native={}/lib", dst.display());
+    println!("cargo:rustc-link-lib=static=abpoa");
 
     // include z library (-lz)
     //println!("cargo:rustc-link-lib=z");
