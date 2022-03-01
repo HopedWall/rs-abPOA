@@ -5,20 +5,21 @@ use std::process::Command;
 
 fn main() {
 
-    let abPOA_dir = format!("{}/{}",env!("CARGO_MANIFEST_DIR"), "abPOA");
-    let abPOA_lib = format!("{}/{}",abPOA_dir, "lib");
+    let abpoa_dir = format!("{}/{}",env!("CARGO_MANIFEST_DIR"), "abPOA");
+    let abpoa_lib = format!("{}/{}",abpoa_dir, "lib");
+
+    eprintln!("{}", abpoa_dir);
+    eprintln!("{}", abpoa_lib);
 
     // use make to build abPOA
     Command::new("make")
         .arg("-C")
-        .arg(abPOA_dir)
+        .arg(abpoa_dir)
         .output()
         .expect("failed to invoke make");
 
-
-
     // include abpoa (-L ./lib -labpoa)
-    println!("{}",format!("cargo:rustc-link-search={}", abPOA_lib));
+    println!("cargo:rustc-link-search={}", abpoa_lib);
     println!("cargo:rustc-link-lib=abpoa");
 
     // include z library (-lz)
