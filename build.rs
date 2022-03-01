@@ -5,13 +5,10 @@ use std::process::Command;
 
 fn main() {
 
+    // use make to build abPOA
     let abpoa_dir = format!("{}/{}",env!("CARGO_MANIFEST_DIR"), "abPOA");
     let abpoa_lib = format!("{}/{}",abpoa_dir, "lib");
 
-    eprintln!("{}", abpoa_dir);
-    eprintln!("{}", abpoa_lib);
-
-    // use make to build abPOA
     Command::new("make")
         .arg("-C")
         .arg(abpoa_dir)
@@ -23,7 +20,9 @@ fn main() {
     println!("cargo:rustc-link-lib=abpoa");
 
     // include z library (-lz)
-    println!("cargo:rustc-link-lib=z");
+    //println!("cargo:rustc-link-lib=z");
+    pkg_config::Config::new().probe("zlib").unwrap();
+    println!("cargo:rerun-if-changed=build.rs");
 
     // The bindgen::Builder is the main entry point
     // to bindgen, and lets you build up options for
