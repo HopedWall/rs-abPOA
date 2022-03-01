@@ -1,9 +1,4 @@
-use crate::abpoa::{
-    abpoa_add_graph_edge, abpoa_add_graph_node, abpoa_align_sequence_to_graph, abpoa_dump_pog,
-    abpoa_init, abpoa_init_para, abpoa_msa, abpoa_para_t, abpoa_post_set_para, abpoa_res_t,
-    abpoa_t, free, strdup, ABPOA_CDEL, ABPOA_CDIFF, ABPOA_CHARD_CLIP, ABPOA_CINS, ABPOA_CMATCH,
-    ABPOA_CSOFT_CLIP, ABPOA_SINK_NODE_ID, ABPOA_SRC_NODE_ID, FILE,
-};
+use crate::abpoa::{abpoa_add_graph_edge, abpoa_add_graph_node, abpoa_align_sequence_to_graph, abpoa_dump_pog, abpoa_init, abpoa_init_para, abpoa_msa, abpoa_para_t, abpoa_post_set_para, abpoa_res_t, abpoa_t, free, strdup, ABPOA_CDEL, ABPOA_CDIFF, ABPOA_CHARD_CLIP, ABPOA_CINS, ABPOA_CMATCH, ABPOA_CSOFT_CLIP, ABPOA_SINK_NODE_ID, ABPOA_SRC_NODE_ID, FILE, abpoa_free, abpoa_free_para};
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::ffi::CString;
@@ -657,6 +652,24 @@ impl AbpoaAligner {
             cs_string.as_str(),
         )
     }
+
+    pub unsafe fn create_align_safe(nodes: &Vec<&str>, edges: &Vec<(usize, usize)>,query: &str) -> AbpoaAlignmentResult {
+
+        // Create the aligner
+        let mut aligner = AbpoaAligner::new_with_example_params();
+
+        // Create the graph
+        aligner.add_nodes_edges(nodes, edges);
+
+        // Align sequence to graph
+        let res = aligner.align_sequence(query);
+
+        // IMPORTANT: delete memory associated with ab and abpt
+        abpoa_free(aligner.ab); abpoa_free_para(aligner.abpt);
+
+        res
+    }
+
 }
 
 #[cfg(test)]
@@ -1181,6 +1194,37 @@ mod tests {
                 result.graph_nodes,
                 vec![0, 2, 2, 2, 2, 4, 4, 4, 4, 4, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 7, 9, 9, 9, 9, 10]
             );
+        }
+    }
+
+    #[test]
+    fn safe_function_test() {
+        unsafe {
+            let mut aligner = AbpoaAligner::new_with_example_params();
+
+            let nodes: Vec<&str> = vec![
+                "A", "G", "AAAT", "AA", "TTTCT", "GG", "AGTTCTAT", "A", "T", "ATAT", "A", "T",
+            ];
+
+            let edges: Vec<(usize, usize)> = vec![
+                (0, 2),
+                (1, 2),
+                (2, 3),
+                (2, 4),
+                (3, 4),
+                (4, 5),
+                (4, 6),
+                (5, 6),
+                (6, 7),
+                (6, 8),
+                (7, 9),
+                (8, 9),
+                (9, 10),
+                (9, 11),
+            ];
+
+            let res = AbpoaAligner::create_align_safe(&nodes, &edges, "AGAAT");
+            println!("{:#?}", res.cigar)
         }
     }
 }
