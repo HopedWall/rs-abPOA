@@ -30,8 +30,8 @@ fn main() {
     println!("cargo:rustc-link-lib=static=abpoa");
 
     // include z library (-lz)
-    //println!("cargo:rustc-link-lib=z");
-    pkg_config::Config::new().probe("zlib").unwrap();
+    println!("cargo:rustc-link-lib=z");
+    //pkg_config::Config::new().probe("zlib").unwrap();
     println!("cargo:rerun-if-changed=build.rs");
 
     // The bindgen::Builder is the main entry point
