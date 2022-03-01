@@ -12,8 +12,11 @@ fn main() {
         .output()
         .expect("failed to invoke make");
 
+    let path = env!("CARGO_MANIFEST_DIR");
+    println!("{}", path);
+
     // include abpoa (-L ./lib -labpoa)
-    println!("cargo:rustc-link-search=abPOA/lib");
+    println!("{}",format!("cargo:rustc-link-search={}/abPOA/lib", path));
     println!("cargo:rustc-link-lib=abpoa");
 
     // include z library (-lz)
