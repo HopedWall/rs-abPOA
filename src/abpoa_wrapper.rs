@@ -1,7 +1,7 @@
 use crate::abpoa::{abpoa_add_graph_edge, abpoa_add_graph_node, abpoa_align_sequence_to_graph, abpoa_dump_pog, abpoa_init, abpoa_init_para, abpoa_msa, abpoa_para_t, abpoa_post_set_para, abpoa_res_t, abpoa_t, free, strdup, ABPOA_CDEL, ABPOA_CDIFF, ABPOA_CHARD_CLIP, ABPOA_CINS, ABPOA_CMATCH, ABPOA_CSOFT_CLIP, ABPOA_SINK_NODE_ID, ABPOA_SRC_NODE_ID, FILE, abpoa_free, abpoa_free_para};
 use rayon::prelude::*;
 use std::collections::HashMap;
-use std::ffi::CString;
+use std::ffi::{c_void, CString};
 use std::os::raw::{c_char, c_int};
 use std::ptr;
 
@@ -643,6 +643,10 @@ impl AbpoaAligner {
 
         assert_eq!(abpoa_ids.len(), graph_ids.len());
 
+        if res.n_cigar > 0 {
+            free(res.graph_cigar as *mut c_void);
+        }
+
         AbpoaAlignmentResult::new_with_params(
             cigar_string.as_str(),
             abpoa_ids,
@@ -676,6 +680,32 @@ impl AbpoaAligner {
 mod tests {
     use super::*;
     use crate::abpoa::{abpoa_generate_gfa, stdout};
+
+    #[test]
+    fn test_simply_create() {
+        // to be run with: (requires rust nightly -- rustup default nighly)
+        // RUSTFLAGS="-Z sanitizer=address" cargo test test_simply_create --target x86_64-unknown-linux-gnu
+        unsafe {
+            let mut aligner = AbpoaAligner::new_with_example_params();
+            aligner.add_nodes_edges(&vec!["AAA", "CC"], &vec![(0,1)]);
+            aligner.align_sequence("AACC");
+            // if these two functions are not called, there's a leak
+            abpoa_free(aligner.ab); abpoa_free_para(aligner.abpt);
+        }
+    }
+
+
+    #[test]
+    fn test_create_and_align() {
+        // to be run with: (requires rust nightly -- rustup default nighly)
+        // RUSTFLAGS="-Z sanitizer=address" cargo test test_create_and_align --target x86_64-unknown-linux-gnu
+        unsafe {
+            let result = AbpoaAligner::create_align_safe(
+                                                         &vec!["AAA", "CC"],
+                                                         &vec![(0,1)],
+                                                         "AACC");
+        }
+    }
 
     // ----- Check msa and consensus ("black-box" version) -----
     #[test]
