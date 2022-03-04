@@ -496,7 +496,7 @@ impl AbpoaAligner {
     }
 
     fn is_head(&self, node: &i32) -> bool {
-        let node_appears_as_end_edge = self.edges_abpoa.par_iter().any(|x| x.1 == *node);
+        let node_appears_as_end_edge = self.edges_abpoa.iter().any(|x| x.1 == *node);
         return !node_appears_as_end_edge;
     }
 
@@ -513,7 +513,7 @@ impl AbpoaAligner {
     }
 
     fn is_tail(&self, node: &i32) -> bool {
-        let node_appears_as_start_edge = self.edges_abpoa.par_iter().any(|x| x.0 == *node);
+        let node_appears_as_start_edge = self.edges_abpoa.iter().any(|x| x.0 == *node);
         return !node_appears_as_start_edge;
     }
 
