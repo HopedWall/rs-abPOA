@@ -1,5 +1,5 @@
 use crate::abpoa::{abpoa_add_graph_edge, abpoa_add_graph_node, abpoa_align_sequence_to_graph, abpoa_dump_pog, abpoa_init, abpoa_init_para, abpoa_msa, abpoa_para_t, abpoa_post_set_para, abpoa_res_t, abpoa_t, free, strdup, ABPOA_CDEL, ABPOA_CDIFF, ABPOA_CHARD_CLIP, ABPOA_CINS, ABPOA_CMATCH, ABPOA_CSOFT_CLIP, ABPOA_SINK_NODE_ID, ABPOA_SRC_NODE_ID, FILE, abpoa_free, abpoa_free_para};
-use rayon::prelude::*;
+//use rayon::prelude::*;
 use std::collections::HashMap;
 use std::ffi::{c_void, CString};
 use std::os::raw::{c_char, c_int};
