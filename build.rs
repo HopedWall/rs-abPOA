@@ -5,7 +5,6 @@ use std::path::PathBuf;
 use cmake;
 
 fn main() {
-
     /*
     // use make to build abPOA
     let abpoa_dir = format!("{}/{}",env!("CARGO_MANIFEST_DIR"), "abPOA");

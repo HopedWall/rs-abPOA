@@ -1,0 +1,18 @@
+H	VN:Z:1.0
+S	1	CGGGACCTTA
+S	2	ATATCTAG
+S	3	GGGGTATA
+S	4	TGTAAACGG
+S	5	AAAATCCGG
+S	6	CAAATAAGC
+S	7	TAAAATCGTTTA
+L	1	+	2	+	0M
+L	1	+	3	+	0M
+L	2	+	4	+	0M
+L	3	+	4	+	0M
+L	4	+	5	+	0M
+L	4	+	6	+	0M
+L	5	+	7	+	0M
+L	6	+	7	+	0M
+P	x	1+,2+,4+,5+,7+	*
+P	y	1+,3+,4+,6+,7+	*

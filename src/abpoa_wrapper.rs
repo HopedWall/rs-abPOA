@@ -1,12 +1,21 @@
-use crate::abpoa::{abpoa_add_graph_edge, abpoa_add_graph_node, abpoa_align_sequence_to_graph, abpoa_dump_pog, abpoa_init, abpoa_init_para, abpoa_msa, abpoa_para_t, abpoa_post_set_para, abpoa_res_t, abpoa_t, free, strdup, ABPOA_CDEL, ABPOA_CDIFF, ABPOA_CHARD_CLIP, ABPOA_CINS, ABPOA_CMATCH, ABPOA_CSOFT_CLIP, ABPOA_SINK_NODE_ID, ABPOA_SRC_NODE_ID, FILE, abpoa_free, abpoa_free_para};
+use crate::abpoa::{
+    abpoa_add_graph_edge, abpoa_add_graph_node, abpoa_align_sequence_to_graph, abpoa_dump_pog,
+    abpoa_free, abpoa_free_para, abpoa_init, abpoa_init_para, abpoa_msa, abpoa_para_t,
+    abpoa_post_set_para, abpoa_res_t, abpoa_t, free, strdup, ABPOA_CDEL, ABPOA_CDIFF,
+    ABPOA_CHARD_CLIP, ABPOA_CINS, ABPOA_CMATCH, ABPOA_CSOFT_CLIP, ABPOA_SINK_NODE_ID,
+    ABPOA_SRC_NODE_ID, FILE,
+};
 //use rayon::prelude::*;
 use std::collections::HashMap;
 use std::ffi::{c_void, CString};
 use std::os::raw::{c_char, c_int};
 use std::ptr;
 
+use gfa::gfa::GFA;
+use gfa::parser::GFAParser;
 use log::{info, warn};
 use std::env;
+use std::path::PathBuf;
 use std::time::Instant;
 
 pub struct AbpoaAligner {
@@ -208,22 +217,21 @@ impl AbpoaAligner {
         4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
     ];
     const NT256_TABLE: [char; 256] = [
-    'A', 'C', 'G', 'T',  'N', '-', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
-    'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', '-',  'N', 'N', 'N', 'N',
-    'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
-    'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
-    'N', 'A', 'N', 'C',  'N', 'N', 'N', 'G',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
-    'N', 'N', 'N', 'N',  'T', 'T', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
-    'N', 'A', 'N', 'C',  'N', 'N', 'N', 'G',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
-    'N', 'N', 'N', 'N',  'T', 'T', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
-    'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
-    'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
-    'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
-    'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
-    'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
-    'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
-    'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
-    'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N'
+        'A', 'C', 'G', 'T', 'N', '-', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N',
+        'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', '-', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N',
+        'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N',
+        'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'A', 'N', 'C', 'N', 'N', 'N', 'G',
+        'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'T', 'T', 'N', 'N', 'N', 'N',
+        'N', 'N', 'N', 'N', 'N', 'N', 'N', 'A', 'N', 'C', 'N', 'N', 'N', 'G', 'N', 'N', 'N', 'N',
+        'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'T', 'T', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N',
+        'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N',
+        'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N',
+        'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N',
+        'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N',
+        'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N',
+        'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N',
+        'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N', 'N',
+        'N', 'N', 'N', 'N',
     ];
     const ALN_ALPHABET: [char; 6] = ['A', 'C', 'G', 'T', 'N', '-'];
     const CONS_ALPHABET: [char; 5] = ['A', 'C', 'G', 'T', 'N'];
@@ -360,6 +368,47 @@ impl AbpoaAligner {
     }
 
     pub unsafe fn add_nodes_from_seq(&mut self, seq: &str) {
+        let bseq: Vec<u8> = seq
+            .chars()
+            .map(|c| *(AbpoaAligner::NT4_TABLE).get(c as usize).unwrap())
+            .collect();
+
+        // First add the nodes to the graph
+        // NOTE: in abpoa, each node has length 1 (i.e. a single nucleotide)
+        let ids: Vec<i32> = bseq
+            .into_iter()
+            .map(|s| abpoa_add_graph_node((*self.ab).abg, s))
+            .collect();
+
+        assert_eq!(seq.len(), ids.len());
+        for i in 0..ids.len() {
+            let id = ids.get(i).unwrap();
+            let seq = seq.chars().nth(i).unwrap();
+            self.nodes_str.insert(*id, seq);
+        }
+
+        //Then add the edges between said nodes
+        ids.windows(2).for_each(|w| {
+            abpoa_add_graph_edge(
+                (*self.ab).abg,
+                *w.get(0).unwrap(),
+                *w.get(1).unwrap(),
+                0,
+                1,
+                0,
+                0,
+                0,
+            );
+            self.edges_abpoa
+                .push((*w.get(0).unwrap(), *w.get(1).unwrap()));
+        });
+
+        // Update wrapper data
+        self.n_nodes += seq.len();
+        self.nodes.push(ids.clone());
+    }
+
+    pub unsafe fn create_graph_from_paths(&mut self, seq: &str) {
         let bseq: Vec<u8> = seq
             .chars()
             .map(|c| *(AbpoaAligner::NT4_TABLE).get(c as usize).unwrap())
@@ -657,8 +706,11 @@ impl AbpoaAligner {
         )
     }
 
-    pub unsafe fn create_align_safe(nodes: &Vec<&str>, edges: &Vec<(usize, usize)>,query: &str) -> AbpoaAlignmentResult {
-
+    pub unsafe fn create_align_safe(
+        nodes: &Vec<&str>,
+        edges: &Vec<(usize, usize)>,
+        query: &str,
+    ) -> AbpoaAlignmentResult {
         // Create the aligner
         let mut aligner = AbpoaAligner::new_with_example_params();
 
@@ -669,17 +721,43 @@ impl AbpoaAligner {
         let res = aligner.align_sequence(query);
 
         // IMPORTANT: delete memory associated with ab and abpt
-        abpoa_free(aligner.ab); abpoa_free_para(aligner.abpt);
+        abpoa_free(aligner.ab);
+        abpoa_free_para(aligner.abpt);
 
         res
     }
 
+    pub unsafe fn read_graph_from_file(&mut self, path_file: &PathBuf) {
+        let parser = GFAParser::new();
+        let gfa: GFA<usize, ()> = parser.parse_file(&PathBuf::from(path_file)).unwrap();
+        self.read_graph_from_GFA(&gfa);
+    }
+
+    pub unsafe fn read_graph_from_GFA(&mut self, gfa: &GFA<usize, ()>) {
+        let nodes_as_strings: Vec<String> = gfa
+            .segments
+            .iter()
+            .map(|s| s.sequence.to_string())
+            .collect();
+        let nodes: Vec<&str> = nodes_as_strings.iter().map(|s| s.as_str()).collect();
+        let edges: Vec<(usize, usize)> = gfa
+            .links
+            .iter()
+            .map(|e| (e.from_segment - 1, e.to_segment - 1))
+            .collect();
+
+        //println!("Nodes from GFA: {:?}", nodes_as_strings);
+        //println!("Edges from GFA: {:?}", edges);
+
+        self.add_nodes_edges(&nodes, &edges);
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::abpoa::{abpoa_generate_gfa, stdout};
+    use gfa::gfa::Line::Path;
 
     #[test]
     fn test_simply_create() {
@@ -687,23 +765,20 @@ mod tests {
         // RUSTFLAGS="-Z sanitizer=address" cargo test test_simply_create --target x86_64-unknown-linux-gnu
         unsafe {
             let mut aligner = AbpoaAligner::new_with_example_params();
-            aligner.add_nodes_edges(&vec!["AAA", "CC"], &vec![(0,1)]);
+            aligner.add_nodes_edges(&vec!["AAA", "CC"], &vec![(0, 1)]);
             aligner.align_sequence("AACC");
             // if these two functions are not called, there's a leak
-            abpoa_free(aligner.ab); abpoa_free_para(aligner.abpt);
+            abpoa_free(aligner.ab);
+            abpoa_free_para(aligner.abpt);
         }
     }
-
 
     #[test]
     fn test_create_and_align() {
         // to be run with: (requires rust nightly -- rustup default nighly)
         // RUSTFLAGS="-Z sanitizer=address" cargo test test_create_and_align --target x86_64-unknown-linux-gnu
         unsafe {
-            let result = AbpoaAligner::create_align_safe(
-                                                         &vec!["AAA", "CC"],
-                                                         &vec![(0,1)],
-                                                         "AACC");
+            let result = AbpoaAligner::create_align_safe(&vec!["AAA", "CC"], &vec![(0, 1)], "AACC");
         }
     }
 
@@ -723,7 +798,7 @@ mod tests {
                 "CGTCAATCTATCGGTAAAGCATACGCTCTGTAGCCGAAGACCTCGGCAATCAC",
                 "CGTCAATCTATCTTCAAGCATACGCGGCAGAGCCGAAGACCTCGGCAATC",
                 "CGTCAATGGATCGAGTACGCGGCAGAGCCGAAGACCTCGGCAATCAC",
-                "CGTCAATCTAATCGAAGCATACGCGGCAGAGCCGTCTACCTCGGCAATCACGT"
+                "CGTCAATCTAATCGAAGCATACGCGGCAGAGCCGTCTACCTCGGCAATCACGT",
             ]
             .to_vec();
 
@@ -964,6 +1039,9 @@ mod tests {
                 let curr_cigar = res.graph_cigar.add(i as usize);
                 op = (*curr_cigar & 0xf) as u32;
 
+                // TODO: controlla S e H
+                // usa abpoa da linea di comando
+
                 op_char = match op {
                     ABPOA_CMATCH => 'M',
                     ABPOA_CINS => 'I',
@@ -1104,27 +1182,68 @@ mod tests {
             // Navigate the cigar
             let mut op: u32 = 0;
             let mut op_char = ' ';
-            let mut node_id: i32 = 0;
+            let mut node_id: Option<i32> = None;
+            let mut query_id: Option<i32> = None;
+
             for i in 0..res.n_cigar {
                 let curr_cigar = res.graph_cigar.add(i as usize);
                 op = (*curr_cigar & 0xf) as u32;
 
                 op_char = match op {
-                    ABPOA_CMATCH => 'M',
-                    ABPOA_CINS => 'I',
-                    ABPOA_CDEL => 'D',
-                    ABPOA_CDIFF => 'X',
-                    ABPOA_CSOFT_CLIP => 'S',
-                    ABPOA_CHARD_CLIP => 'H',
+                    ABPOA_CMATCH => {
+                        node_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
+                        // TODO: query_id
+                        // for MATCH/MISMATCH: node_id << 34  | query_id << 4 | op
+                        //query_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
+                        'M'
+                    }
+                    ABPOA_CINS => {
+                        // TODO: oplen
+                        // for INSERTION:      query_id << 34 | op_len << 4   | op
+                        query_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
+                        'I'
+                    }
+                    ABPOA_CDEL => {
+                        // TODO: oplen
+                        // for DELETION:       node_id << 34  | op_len << 4   | op // op_len is always equal to 1
+                        node_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
+                        'D'
+                    }
+                    ABPOA_CDIFF => {
+                        //TODO: not sure if node_id or query_id, should be node_id
+                        node_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
+                        // TODO: query_id
+                        // for MATCH/MISMATCH: node_id << 34  | query_id << 4 | op
+                        //query_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
+                        'X'
+                    }
+                    ABPOA_CSOFT_CLIP => {
+                        // TODO: op_len
+                        // for CLIP            query_id << 34 | op_len << 4   | op
+                        query_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
+                        'S'
+                    }
+                    ABPOA_CHARD_CLIP => {
+                        // TODO: op_len
+                        // for CLIP            query_id << 34 | op_len << 4   | op
+                        query_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
+                        'H'
+                    }
                     _ => ' ',
                 };
 
-                node_id = ((*curr_cigar >> 34) & 0x3fffffff) as i32;
-
-                //println!("Node id {} type {}", node_id, op_char);
-
-                abpoa_ids.push(node_id);
                 cigar_vec.push(op_char);
+                println!("Found op_char: {}", op_char);
+
+                match node_id {
+                    Some(node) => abpoa_ids.push(node),
+                    None => (),
+                }
+
+                match query_id {
+                    Some(query) => println!("Found query_id: {}", query),
+                    None => (),
+                }
             }
 
             // Compact cigar
@@ -1255,6 +1374,246 @@ mod tests {
 
             let res = AbpoaAligner::create_align_safe(&nodes, &edges, "AGAAT");
             println!("{:#?}", res.cigar)
+        }
+    }
+
+    #[test]
+    fn test_cigar_length() {
+        unsafe {
+            let nodes = vec!["ACGT", "TTG", "CGA"];
+            let edges = vec![(0, 1), (1, 2)];
+            let query = "ACTTTGCGTTTTTTT";
+
+            let total_node_length: usize = nodes.iter().map(|x| x.len()).sum();
+
+            let res = AbpoaAligner::create_align_safe(&nodes, &edges, &query);
+            println!("{:#?}", res.cigar_vec);
+            //assert_eq!(total_node_length, res.cigar_vec.len())
+        }
+    }
+
+    #[test]
+    fn test_cigar_length_suffix() {
+        unsafe {
+            let nodes = vec!["ACGT", "TTG", "CGA"];
+            let edges = vec![(0, 1), (1, 2)];
+            let query = "TGCG";
+
+            let total_node_length: usize = nodes.iter().map(|x| x.len()).sum();
+
+            let res = AbpoaAligner::create_align_safe(&nodes, &edges, &query);
+            println!("{:#?}", res.cigar_vec);
+            //assert_eq!(res.cigar_vec.len(), 5)
+        }
+    }
+
+    #[test]
+    fn test_validate_with_GFA() {
+        unsafe {
+            let nodes = vec!["ACGT", "TTG", "CGA"];
+            let edges = vec![(0, 1), (1, 2)];
+
+            let mut aligner = AbpoaAligner::new_with_example_params();
+            aligner.add_nodes_edges(&nodes, &edges);
+            abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+            println!("");
+
+            let query = "ACTTTGCGTTTTTTT";
+            let result = aligner.align_sequence(query);
+            abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+        }
+    }
+
+    #[test]
+    fn test_validate_with_GFA_2() {
+        unsafe {
+            let nodes = vec!["TTG", "G", "AAT"];
+            let edges = vec![(0, 1), (1, 2)];
+
+            let mut aligner = AbpoaAligner::new_with_example_params();
+            aligner.add_nodes_edges(&nodes, &edges);
+            abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+            println!("");
+
+            let query = "AAT";
+            let result = aligner.align_sequence(query);
+            abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+            println!("Result: {:#?}", result);
+        }
+    }
+
+    #[test]
+    fn test_validate() {
+        // Funziona come abpoa (grafo con path)
+        unsafe {
+            let nodes = vec!["ACGT", "TTG", "CGA"];
+            let edges = vec![(0, 1), (1, 2)];
+
+            let mut aligner = AbpoaAligner::new_with_example_params();
+            aligner.add_nodes_edges(&nodes, &edges);
+            //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+            //println!("");
+
+            let query = "CTG";
+            let result = aligner.align_sequence(query);
+            //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+            println!("Result: {:#?}", result);
+        }
+    }
+
+    #[test]
+    fn test_validate_2() {
+        unsafe {
+            let nodes = vec!["ACGT", "TTG", "AAA", "CGA"];
+            let edges = vec![(0, 1), (0, 2), (1, 3), (2, 3)];
+
+            let mut aligner = AbpoaAligner::new_with_example_params();
+            aligner.add_nodes_edges(&nodes, &edges);
+            //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+            //println!("");
+
+            let query = "CTG";
+            let result = aligner.align_sequence(query);
+            //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+            println!("Result: {:#?}", result);
+        }
+    }
+
+    #[test]
+    fn test_validate_3() {
+        unsafe {
+            let nodes = vec!["ACGT", "TTG", "AAA", "CGA"];
+            let edges = vec![(0, 1), (0, 2), (1, 3), (2, 3)];
+
+            let mut aligner = AbpoaAligner::new_with_example_params();
+            aligner.add_nodes_edges(&nodes, &edges);
+            //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+            //println!("");
+
+            let query = "TTG";
+            let result = aligner.align_sequence(query);
+            //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+            println!("Result: {:#?}", result);
+        }
+    }
+
+    #[test]
+    fn test_validate_subgraph_7() {
+        unsafe {
+            let mut aligner = AbpoaAligner::new_with_example_params();
+            let nodes = vec![
+                "TTG",
+                "A",
+                "G",
+                "AAAT",
+                "AA",
+                "TTTCT",
+                "GG",
+                "AGTTCTAT",
+                "A",
+                "T",
+                "ATAT",
+                "A",
+                "T",
+                "CCAACTCTCTG",
+            ];
+            let edges = vec![
+                (0, 1),
+                (0, 2),
+                (1, 3),
+                (2, 3),
+                (3, 4),
+                (3, 5),
+                (4, 5),
+                (5, 6),
+                (5, 7),
+                (6, 7),
+                (7, 8),
+                (7, 9),
+                (8, 10),
+                (9, 10),
+                (10, 11),
+                (10, 12),
+                (11, 13),
+                (12, 13),
+            ];
+            aligner.add_nodes_edges(&nodes, &edges);
+            //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+            println!("Edges: {:#?}", aligner.edges_abpoa);
+            println!("Nodes: {:#?}", aligner.abpoa_id_to_abstraction_id);
+
+            /*
+            let mut aligner = AbpoaAligner::new_with_example_params();
+            aligner.add_nodes_edges(&nodes, &edges);
+            abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+            //println!("");
+            */
+
+            let query = "CAAATAAGGCTTGGAAATTTTCTGGAGTTCTATTATATTCCAACTCTCTG";
+            let result = aligner.align_sequence(query);
+            println!("Result: {:#?}", result);
+        }
+    }
+
+    #[test]
+    fn test_validate_subgraph_8() {
+        unsafe {
+            let mut aligner = AbpoaAligner::new_with_example_params();
+            let nodes = vec![
+                "TTG",
+                "A",
+                "G",
+                "AAAT",
+                "AA",
+                "TTTCT",
+                "GG",
+                "AGTTCTAT",
+                "A",
+                "T",
+                "ATAT",
+                "A",
+                "T",
+                "CCAACTCTCTG",
+            ];
+            let edges = vec![
+                (0, 1),
+                (0, 2),
+                (1, 3),
+                (2, 3),
+                (3, 4),
+                (3, 5),
+                (4, 5),
+                (5, 6),
+                (5, 7),
+                (6, 7),
+                (7, 8),
+                (7, 9),
+                (8, 10),
+                (9, 10),
+                (10, 11),
+                (10, 12),
+                (11, 13),
+                (12, 13),
+            ];
+            aligner.add_nodes_edges(&nodes, &edges);
+            abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+            println!("Edges: {:#?}", aligner.edges_abpoa);
+            println!("Nodes: {:#?}", aligner.abpoa_id_to_abstraction_id);
+
+            let query = "CAAATAAGGCTTGGAAATTTTCTGGAGTTCTATTATATTCCAACTCTCTG";
+            let result = aligner.align_sequence(query);
+            abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+            println!("Result: {:#?}", result);
+        }
+    }
+
+    #[test]
+    fn test_read_graph() {
+        unsafe {
+            let mut aligner = AbpoaAligner::new_with_example_params();
+            aligner.read_graph_from_file(&PathBuf::from("test/graph.gfa"));
+            //println!("Nodes: {:#?}", aligner.nodes);
+            //println!("Edges: {:#?}", aligner.edges);
         }
     }
 }
