@@ -595,28 +595,78 @@ impl AbpoaAligner {
         let mut cigar_vec: Vec<char> = Vec::new();
 
         // Navigate the cigar
+        //println!("Cigar length: {}", res.n_cigar);
         for i in 0..res.n_cigar {
             let curr_cigar = res.graph_cigar.add(i as usize);
             let op = (*curr_cigar & 0xf) as u32;
+            let mut node_id: Option<i32> = None;
+            let mut query_id: Option<i32> = None;
 
             let op_char = match op {
-                ABPOA_CMATCH => 'M',
-                ABPOA_CINS => 'I',
-                ABPOA_CDEL => 'D',
-                ABPOA_CDIFF => 'X',
-                ABPOA_CSOFT_CLIP => 'S',
-                ABPOA_CHARD_CLIP => 'H',
+                ABPOA_CMATCH => {
+                    node_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
+                    // TODO: query_id
+                    // for MATCH/MISMATCH: node_id << 34  | query_id << 4 | op
+                    //query_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
+                    'M'
+                }
+                ABPOA_CINS => {
+                    // TODO: oplen
+                    // for INSERTION:      query_id << 34 | op_len << 4   | op
+                    query_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
+                    'I'
+                }
+                ABPOA_CDEL => {
+                    // TODO: oplen
+                    // for DELETION:       node_id << 34  | op_len << 4   | op // op_len is always equal to 1
+                    node_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
+                    'D'
+                }
+                ABPOA_CDIFF => {
+                    //TODO: not sure if node_id or query_id, should be node_id
+                    node_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
+                    // TODO: query_id
+                    // for MATCH/MISMATCH: node_id << 34  | query_id << 4 | op
+                    //query_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
+                    'X'
+                }
+                ABPOA_CSOFT_CLIP => {
+                    // TODO: op_len
+                    // for CLIP            query_id << 34 | op_len << 4   | op
+                    query_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
+                    'S'
+                }
+                ABPOA_CHARD_CLIP => {
+                    // TODO: op_len
+                    // for CLIP            query_id << 34 | op_len << 4   | op
+                    query_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
+                    'H'
+                }
                 _ => ' ',
             };
 
-            let node_id: i32 = ((*curr_cigar >> 34) & 0x3fffffff) as i32;
+            cigar_vec.push(op_char);
+            //println!("Found op_char: {}", op_char);
+            //println!("Found node id: {:#?}", node_id);
 
-            // Necessary because sometimes abpoa returns weird nodes
-            // TODO: figure out why this happens
-            if self.abpoa_id_to_abstraction_id.contains_key(&node_id) && op_char != ' ' {
-                abpoa_ids.push(node_id);
-                cigar_vec.push(op_char);
+            match node_id {
+                Some(node) => {
+
+                    // Necessary because sometimes abpoa returns weird nodes
+                    // TODO: figure out why this happens
+                    if self.abpoa_id_to_abstraction_id.contains_key(&node) && op_char != ' ' {
+                        abpoa_ids.push(node);
+                    }
+
+                }
+                None => (),
             }
+
+            match query_id {
+                Some(query) => println!("Found query_id: {}", query),
+                None => (),
+            }
+
         }
 
         // Convert abpoa_ids to abstraction_ids
@@ -1182,68 +1232,27 @@ mod tests {
             // Navigate the cigar
             let mut op: u32 = 0;
             let mut op_char = ' ';
-            let mut node_id: Option<i32> = None;
-            let mut query_id: Option<i32> = None;
-
+            let mut node_id: i32 = 0;
             for i in 0..res.n_cigar {
                 let curr_cigar = res.graph_cigar.add(i as usize);
                 op = (*curr_cigar & 0xf) as u32;
 
                 op_char = match op {
-                    ABPOA_CMATCH => {
-                        node_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
-                        // TODO: query_id
-                        // for MATCH/MISMATCH: node_id << 34  | query_id << 4 | op
-                        //query_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
-                        'M'
-                    }
-                    ABPOA_CINS => {
-                        // TODO: oplen
-                        // for INSERTION:      query_id << 34 | op_len << 4   | op
-                        query_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
-                        'I'
-                    }
-                    ABPOA_CDEL => {
-                        // TODO: oplen
-                        // for DELETION:       node_id << 34  | op_len << 4   | op // op_len is always equal to 1
-                        node_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
-                        'D'
-                    }
-                    ABPOA_CDIFF => {
-                        //TODO: not sure if node_id or query_id, should be node_id
-                        node_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
-                        // TODO: query_id
-                        // for MATCH/MISMATCH: node_id << 34  | query_id << 4 | op
-                        //query_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
-                        'X'
-                    }
-                    ABPOA_CSOFT_CLIP => {
-                        // TODO: op_len
-                        // for CLIP            query_id << 34 | op_len << 4   | op
-                        query_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
-                        'S'
-                    }
-                    ABPOA_CHARD_CLIP => {
-                        // TODO: op_len
-                        // for CLIP            query_id << 34 | op_len << 4   | op
-                        query_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
-                        'H'
-                    }
+                    ABPOA_CMATCH => 'M',
+                    ABPOA_CINS => 'I',
+                    ABPOA_CDEL => 'D',
+                    ABPOA_CDIFF => 'X',
+                    ABPOA_CSOFT_CLIP => 'S',
+                    ABPOA_CHARD_CLIP => 'H',
                     _ => ' ',
                 };
 
+                node_id = ((*curr_cigar >> 34) & 0x3fffffff) as i32;
+
+                //println!("Node id {} type {}", node_id, op_char);
+
+                abpoa_ids.push(node_id);
                 cigar_vec.push(op_char);
-                println!("Found op_char: {}", op_char);
-
-                match node_id {
-                    Some(node) => abpoa_ids.push(node),
-                    None => (),
-                }
-
-                match query_id {
-                    Some(query) => println!("Found query_id: {}", query),
-                    None => (),
-                }
             }
 
             // Compact cigar
