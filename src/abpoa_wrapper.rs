@@ -601,72 +601,72 @@ impl AbpoaAligner {
             let op = (*curr_cigar & 0xf) as u32;
             let mut node_id: Option<i32> = None;
             let mut query_id: Option<i32> = None;
+            let mut op_len: Option<i32> = None;
 
             let op_char = match op {
                 ABPOA_CMATCH => {
-                    node_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
-                    // TODO: query_id
                     // for MATCH/MISMATCH: node_id << 34  | query_id << 4 | op
-                    //query_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
+                    node_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
+                    query_id = Some(((*curr_cigar >> 4) & 0x3fffffff) as i32);
                     'M'
                 }
                 ABPOA_CINS => {
-                    // TODO: oplen
                     // for INSERTION:      query_id << 34 | op_len << 4   | op
                     query_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
+                    op_len = Some(((*curr_cigar >> 4) & 0x3fffffff) as i32);
                     'I'
                 }
                 ABPOA_CDEL => {
-                    // TODO: oplen
                     // for DELETION:       node_id << 34  | op_len << 4   | op // op_len is always equal to 1
                     node_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
+                    op_len = Some(((*curr_cigar >> 4) & 0x3fffffff) as i32);
                     'D'
                 }
                 ABPOA_CDIFF => {
-                    //TODO: not sure if node_id or query_id, should be node_id
-                    node_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
-                    // TODO: query_id
                     // for MATCH/MISMATCH: node_id << 34  | query_id << 4 | op
-                    //query_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
+                    node_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
+                    query_id = Some(((*curr_cigar >> 4) & 0x3fffffff) as i32);
                     'X'
                 }
                 ABPOA_CSOFT_CLIP => {
-                    // TODO: op_len
                     // for CLIP            query_id << 34 | op_len << 4   | op
                     query_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
+                    op_len = Some(((*curr_cigar >> 4) & 0x3fffffff) as i32);
                     'S'
                 }
                 ABPOA_CHARD_CLIP => {
-                    // TODO: op_len
                     // for CLIP            query_id << 34 | op_len << 4   | op
                     query_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
+                    op_len = Some(((*curr_cigar >> 4) & 0x3fffffff) as i32);
                     'H'
                 }
                 _ => ' ',
             };
 
             cigar_vec.push(op_char);
-            //println!("Found op_char: {}", op_char);
+            println!("Found op_char: {}", op_char);
             //println!("Found node id: {:#?}", node_id);
 
             match node_id {
                 Some(node) => {
-
                     // Necessary because sometimes abpoa returns weird nodes
                     // TODO: figure out why this happens
                     if self.abpoa_id_to_abstraction_id.contains_key(&node) && op_char != ' ' {
                         abpoa_ids.push(node);
                     }
-
                 }
                 None => (),
             }
 
             match query_id {
-                Some(query) => println!("Found query_id: {}", query),
+                Some(query) => println!("Query_id: {}", query),
                 None => (),
             }
 
+            match op_len {
+                Some(len) => println!("Op_len: {}", len),
+                None => (),
+            }
         }
 
         // Convert abpoa_ids to abstraction_ids
@@ -1548,8 +1548,8 @@ mod tests {
             ];
             aligner.add_nodes_edges(&nodes, &edges);
             //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
-            println!("Edges: {:#?}", aligner.edges_abpoa);
-            println!("Nodes: {:#?}", aligner.abpoa_id_to_abstraction_id);
+            //println!("Edges: {:#?}", aligner.edges_abpoa);
+            //println!("Nodes: {:#?}", aligner.abpoa_id_to_abstraction_id);
 
             /*
             let mut aligner = AbpoaAligner::new_with_example_params();
