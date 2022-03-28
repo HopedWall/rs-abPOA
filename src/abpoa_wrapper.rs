@@ -15,6 +15,7 @@ use gfa::gfa::GFA;
 use gfa::parser::GFAParser;
 use log::{info, warn};
 use std::env;
+use std::iter::once;
 use std::path::PathBuf;
 use std::time::Instant;
 
@@ -590,164 +591,213 @@ impl AbpoaAligner {
             &mut res,
         );
 
-        // Create variables to store aln result
-        let mut abpoa_ids: Vec<i32> = Vec::new();
-        let mut cigar_vec: Vec<char> = Vec::new();
+        // Get cigars represented as integers
+        let cigar_integers: Vec<u64> = (0..res.n_cigar)
+            .map(|i| *res.graph_cigar.add(i as usize))
+            .collect();
 
-        // Navigate the cigar
-        //println!("Cigar length: {}", res.n_cigar);
-        for i in 0..res.n_cigar {
-            let curr_cigar = res.graph_cigar.add(i as usize);
-            let op = (*curr_cigar & 0xf) as u32;
-            let mut node_id: Option<i32> = None;
-            let mut query_id: Option<i32> = None;
-            let mut op_len: Option<i32> = None;
-
-            let op_char = match op {
-                ABPOA_CMATCH => {
-                    // for MATCH/MISMATCH: node_id << 34  | query_id << 4 | op
-                    node_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
-                    query_id = Some(((*curr_cigar >> 4) & 0x3fffffff) as i32);
-                    'M'
-                }
-                ABPOA_CINS => {
-                    // for INSERTION:      query_id << 34 | op_len << 4   | op
-                    query_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
-                    op_len = Some(((*curr_cigar >> 4) & 0x3fffffff) as i32);
-                    'I'
-                }
-                ABPOA_CDEL => {
-                    // for DELETION:       node_id << 34  | op_len << 4   | op // op_len is always equal to 1
-                    node_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
-                    op_len = Some(((*curr_cigar >> 4) & 0x3fffffff) as i32);
-                    'D'
-                }
-                ABPOA_CDIFF => {
-                    // for MATCH/MISMATCH: node_id << 34  | query_id << 4 | op
-                    node_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
-                    query_id = Some(((*curr_cigar >> 4) & 0x3fffffff) as i32);
-                    'X'
-                }
-                ABPOA_CSOFT_CLIP => {
-                    // for CLIP            query_id << 34 | op_len << 4   | op
-                    query_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
-                    op_len = Some(((*curr_cigar >> 4) & 0x3fffffff) as i32);
-                    'S'
-                }
-                ABPOA_CHARD_CLIP => {
-                    // for CLIP            query_id << 34 | op_len << 4   | op
-                    query_id = Some(((*curr_cigar >> 34) & 0x3fffffff) as i32);
-                    op_len = Some(((*curr_cigar >> 4) & 0x3fffffff) as i32);
-                    'H'
-                }
-                _ => ' ',
-            };
-
-            cigar_vec.push(op_char);
-            println!("Found op_char: {}", op_char);
-            //println!("Found node id: {:#?}", node_id);
-
-            match node_id {
-                Some(node) => {
-                    // Necessary because sometimes abpoa returns weird nodes
-                    // TODO: figure out why this happens
-                    if self.abpoa_id_to_abstraction_id.contains_key(&node) && op_char != ' ' {
-                        abpoa_ids.push(node);
-                    }
-                }
-                None => (),
-            }
-
-            match query_id {
-                Some(query) => println!("Query_id: {}", query),
-                None => (),
-            }
-
-            match op_len {
-                Some(len) => println!("Op_len: {}", len),
-                None => (),
-            }
+        // De-allocate cigar (once we have the integers, it is no longer needed)
+        if res.n_cigar > 0 {
+            free(res.graph_cigar as *mut c_void);
         }
 
-        // Convert abpoa_ids to abstraction_ids
+        // Get cigars as records that make sense
+        let cigar_vec_records: Vec<AbpoaGraphCigar> = cigar_integers
+            .into_iter()
+            .filter_map(|curr_cigar| {
+                let op = (curr_cigar & 0xf) as u32;
+                let mut node_id: Option<i32> = None;
+                let mut query_id: Option<i32> = None;
+                let mut op_len: Option<i32> = None;
+
+                let op_char = match op {
+                    ABPOA_CMATCH => {
+                        // for MATCH/MISMATCH: node_id << 34  | query_id << 4 | op
+                        node_id = Some(((curr_cigar >> 34) & 0x3fffffff) as i32);
+                        query_id = Some(((curr_cigar >> 4) & 0x3fffffff) as i32);
+                        Some('M')
+                    }
+                    ABPOA_CINS => {
+                        // for INSERTION: query_id << 34 | op_len << 4   | op
+                        query_id = Some(((curr_cigar >> 34) & 0x3fffffff) as i32);
+                        op_len = Some(((curr_cigar >> 4) & 0x3fffffff) as i32);
+                        Some('I')
+                    }
+                    ABPOA_CDEL => {
+                        // for DELETION: node_id << 34  | op_len << 4   | op // op_len is always equal to 1
+                        node_id = Some(((curr_cigar >> 34) & 0x3fffffff) as i32);
+                        op_len = Some(((curr_cigar >> 4) & 0x3fffffff) as i32);
+                        Some('D')
+                    }
+                    ABPOA_CDIFF => {
+                        // for MATCH/MISMATCH: node_id << 34  | query_id << 4 | op
+                        node_id = Some(((curr_cigar >> 34) & 0x3fffffff) as i32);
+                        query_id = Some(((curr_cigar >> 4) & 0x3fffffff) as i32);
+                        Some('X')
+                    }
+                    ABPOA_CSOFT_CLIP => {
+                        // for CLIP query_id << 34 | op_len << 4   | op
+                        query_id = Some(((curr_cigar >> 34) & 0x3fffffff) as i32);
+                        op_len = Some(((curr_cigar >> 4) & 0x3fffffff) as i32);
+                        Some('S')
+                    }
+                    ABPOA_CHARD_CLIP => {
+                        // for CLIP query_id << 34 | op_len << 4   | op
+                        query_id = Some(((curr_cigar >> 34) & 0x3fffffff) as i32);
+                        op_len = Some(((curr_cigar >> 4) & 0x3fffffff) as i32);
+                        Some('H')
+                    }
+                    _ => None,
+                };
+
+                match op_char {
+                    Some(op_char) => {
+                        let record =
+                            AbpoaGraphCigar::cigar_from_params(op_char, node_id, query_id, op_len);
+                        println!("Found cigar record: {:?}", record);
+                        Some(record)
+                    }
+                    _ => None,
+                }
+            })
+            .collect();
+
+        // Get the ids and convert them to abstraction ids
+        let abpoa_ids: Vec<i32> = cigar_vec_records.iter().filter_map(|x| x.node_id).collect();
+        //println!("Abpoa ids: {:#?}", abpoa_ids);
+
         let graph_ids: Vec<usize> = abpoa_ids
             .iter()
             .filter_map(|id| self.abpoa_id_to_abstraction_id.get(id))
             .map(|id| *id)
             .collect();
+        //println!("Graph ids: {:#?}", graph_ids);
 
-        let mut cigar_string = String::new();
-        let mut cs_string = String::from("cs:Z::");
-        if !cigar_vec.is_empty() {
-            let mut last_char = ' ';
-            let mut count = 0;
+        /*
+        let new_cigar_string : Vec<Option<AbpoaGraphCigar>> =
+            once(None)
+                .chain(cigar_vec_records.into_iter().map(|x| Some(x)))
+                .chain(once(None))
+                .into_iter().windows(2);
+         */
 
-            // Convert cigar to string
-            for char in &cigar_vec {
-                if *char != last_char {
-                    if last_char != ' ' {
-                        // This is the initial delimiter for this loop
-                        cigar_string.push_str(&mut format!("{}{}", count, last_char));
+        //let cigar_vec: Vec<char> = cigar_vec_records.iter().map(|rec| rec.op).collect();
+        let mut cigar_vec: Vec<char> = Vec::new();
+
+        // Get the cigar as a string
+        let mut new_cigar_string = String::new();
+        let mut last_cigar_val: Option<AbpoaGraphCigar> = None;
+        let mut last_cigar_count: u64 = 0;
+        for (i, curr_cigar) in cigar_vec_records.iter().enumerate() {
+            match last_cigar_val {
+                // First iteration
+                None => (),
+                // Second to last iteration
+                Some(last_val) => match (curr_cigar.op != last_val.op, last_val.op) {
+                    (true, 'I') => {
+                        let ins_len = curr_cigar.query_id.unwrap() - last_val.query_id.unwrap();
+                        new_cigar_string.push_str(&mut format!("{}{}", ins_len, last_val.op));
+
+                        for i in 0..ins_len {
+                            cigar_vec.push(last_val.op);
+                        }
+
+                        last_cigar_count = 0;
                     }
-                    last_char = *char;
-                    count = 1;
-                } else {
-                    count += 1;
+                    (true, _) => {
+                        new_cigar_string
+                            .push_str(&mut format!("{}{}", last_cigar_count, last_val.op));
+
+                        for i in 0..last_cigar_count {
+                            cigar_vec.push(last_val.op);
+                        }
+
+                        last_cigar_count = 0;
+                    }
+                    (false, _) => (),
+                },
+            }
+
+            last_cigar_val = Some(curr_cigar.clone());
+            last_cigar_count += 1;
+
+            // Last value check
+            if i == cigar_vec_records.len() - 1 {
+                let last_val = last_cigar_val.unwrap();
+                match curr_cigar.op {
+                    'I' => {
+                        let ins_len = curr_cigar.query_id.unwrap() - last_val.query_id.unwrap();
+                        new_cigar_string.push_str(&mut format!("{}{}", ins_len, last_val.op));
+
+                        for i in 0..ins_len {
+                            cigar_vec.push(last_val.op);
+                        }
+
+                        last_cigar_count = 0;
+                    }
+                    _ => {
+                        new_cigar_string
+                            .push_str(&mut format!("{}{}", last_cigar_count, last_val.op));
+
+                        for i in 0..last_cigar_count {
+                            cigar_vec.push(last_val.op);
+                        }
+
+                        last_cigar_count = 0;
+                    }
                 }
             }
-            cigar_string.push_str(&mut format!("{}{}", count, last_char));
+        }
 
-            // Obtain cs string
-            let mut match_count = 1;
-            let mut tmp_string: String = String::new();
-            last_char = ' ';
-            let mut char = ' ';
-            for i in 0..cigar_vec.len() {
-                char = *cigar_vec.get(i).unwrap();
+        // Obtain cs string
+        let mut cs_string = String::new();
+        let mut match_count = 1;
+        let mut tmp_string: String = String::new();
+        let mut last_char = ' ';
+        let mut char = ' ';
 
-                if char != last_char {
-                    if last_char != ' ' {
-                        // This is the initial delimiter for this loop
-                        match last_char {
-                            'M' => cs_string.push_str(&mut format!("{}", match_count)),
-                            'I' => cs_string.push_str(&mut format!("{}{}", '-', tmp_string)),
-                            'D' => cs_string.push_str(&mut format!("{}{}", '+', tmp_string)),
-                            _ => (),
-                        }
-                    }
-                    last_char = char;
-                    // Reset tmp variables
-                    match_count = 1;
-                    tmp_string = String::new();
-                } else {
-                    match char {
-                        'M' => match_count += 1,
-                        'I' => tmp_string.push(seq.char_indices().nth(i).unwrap().1),
-                        'D' => {
-                            let id = abpoa_ids.get(i).unwrap();
-                            tmp_string.push(*self.nodes_str.get(id).unwrap())
-                        }
+        for i in 0..cigar_vec.len() {
+            char = *cigar_vec.get(i).unwrap();
+
+            if char != last_char {
+                if last_char != ' ' {
+                    // This is the initial delimiter for this loop
+                    match last_char {
+                        'M' => cs_string.push_str(&mut format!("{}", match_count)),
+                        'I' => cs_string.push_str(&mut format!("{}{}", '-', tmp_string)),
+                        'D' => cs_string.push_str(&mut format!("{}{}", '+', tmp_string)),
                         _ => (),
                     }
                 }
-            }
-
-            match char {
-                'M' => cs_string.push_str(&mut format!("{}", match_count)),
-                'I' => cs_string.push_str(&mut format!("{}{}", '-', tmp_string)),
-                'D' => cs_string.push_str(&mut format!("{}{}", '+', tmp_string)),
-                _ => (),
+                last_char = char;
+                // Reset tmp variables
+                match_count = 1;
+                tmp_string = String::new();
+            } else {
+                match char {
+                    'M' => match_count += 1,
+                    'I' => tmp_string.push(seq.char_indices().nth(i).unwrap().1),
+                    'D' => {
+                        let id = abpoa_ids.get(i).unwrap();
+                        tmp_string.push(*self.nodes_str.get(id).unwrap())
+                    }
+                    _ => (),
+                }
             }
         }
 
-        assert_eq!(abpoa_ids.len(), graph_ids.len());
-
-        if res.n_cigar > 0 {
-            free(res.graph_cigar as *mut c_void);
+        // Last iteration
+        match char {
+            'M' => cs_string.push_str(&mut format!("{}", match_count)),
+            'I' => cs_string.push_str(&mut format!("{}{}", '-', tmp_string)),
+            'D' => cs_string.push_str(&mut format!("{}{}", '+', tmp_string)),
+            _ => (),
         }
+
+        //assert_eq!(abpoa_ids.len(), graph_ids.len());
 
         AbpoaAlignmentResult::new_with_params(
-            cigar_string.as_str(),
+            new_cigar_string.as_str(),
             abpoa_ids,
             graph_ids,
             &res,
@@ -800,6 +850,30 @@ impl AbpoaAligner {
         //println!("Edges from GFA: {:?}", edges);
 
         self.add_nodes_edges(&nodes, &edges);
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct AbpoaGraphCigar {
+    op: char,
+    node_id: Option<i32>,
+    query_id: Option<i32>,
+    op_len: Option<i32>,
+}
+
+impl AbpoaGraphCigar {
+    pub fn cigar_from_params(
+        op: char,
+        node_id: Option<i32>,
+        query_id: Option<i32>,
+        op_len: Option<i32>,
+    ) -> Self {
+        AbpoaGraphCigar {
+            op,
+            node_id,
+            query_id,
+            op_len,
+        }
     }
 }
 
@@ -1606,12 +1680,12 @@ mod tests {
             ];
             aligner.add_nodes_edges(&nodes, &edges);
             abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
-            println!("Edges: {:#?}", aligner.edges_abpoa);
-            println!("Nodes: {:#?}", aligner.abpoa_id_to_abstraction_id);
+            //println!("Edges: {:#?}", aligner.edges_abpoa);
+            //println!("Nodes: {:#?}", aligner.abpoa_id_to_abstraction_id);
 
             let query = "CAAATAAGGCTTGGAAATTTTCTGGAGTTCTATTATATTCCAACTCTCTG";
             let result = aligner.align_sequence(query);
-            abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+            //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
             println!("Result: {:#?}", result);
         }
     }
@@ -1623,6 +1697,14 @@ mod tests {
             aligner.read_graph_from_file(&PathBuf::from("test/graph.gfa"));
             //println!("Nodes: {:#?}", aligner.nodes);
             //println!("Edges: {:#?}", aligner.edges);
+        }
+    }
+
+    #[test]
+    fn test_with_luca() {
+        unsafe {
+            let mut aligner = AbpoaAligner::new_with_example_params();
+            aligner.read_graph_from_file(&PathBuf::from("test/graph.gfa"));
         }
     }
 }
