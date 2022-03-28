@@ -695,7 +695,7 @@ impl AbpoaAligner {
                 // Second to last iteration
                 Some(last_val) => match (curr_cigar.op != last_val.op, last_val.op) {
                     (true, 'I') => {
-                        let ins_len = curr_cigar.query_id.unwrap() - last_val.query_id.unwrap();
+                        let ins_len = last_val.op_len.unwrap();
                         new_cigar_string.push_str(&mut format!("{}{}", ins_len, last_val.op));
 
                         for i in 0..ins_len {
@@ -726,7 +726,7 @@ impl AbpoaAligner {
                 let last_val = last_cigar_val.unwrap();
                 match curr_cigar.op {
                     'I' => {
-                        let ins_len = curr_cigar.query_id.unwrap() - last_val.query_id.unwrap();
+                        let ins_len = last_val.op_len.unwrap();
                         new_cigar_string.push_str(&mut format!("{}{}", ins_len, last_val.op));
 
                         for i in 0..ins_len {
