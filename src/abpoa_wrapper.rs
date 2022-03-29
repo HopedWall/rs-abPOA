@@ -237,9 +237,23 @@ impl AbpoaAligner {
     const ALN_ALPHABET: [char; 6] = ['A', 'C', 'G', 'T', 'N', '-'];
     const CONS_ALPHABET: [char; 5] = ['A', 'C', 'G', 'T', 'N'];
 
+    /*
     pub fn convert_seq_to_bseq(seq: &str) -> Vec<u8> {
         seq.chars()
             .map(|c| *(AbpoaAligner::NT4_TABLE).get(c as usize).unwrap())
+            .collect()
+    }
+     */
+
+    pub fn convert_seq_to_bseq(seq: &str) -> Vec<u8> {
+        seq.chars()
+            .map(|c| match c {
+                'A' | 'a' => 0,
+                'C' | 'c' => 1,
+                'G' | 'g' => 2,
+                'T' | 't' => 3,
+                _ => panic!("Cannot add base to graph!"),
+            })
             .collect()
     }
 
@@ -369,10 +383,14 @@ impl AbpoaAligner {
     }
 
     pub unsafe fn add_nodes_from_seq(&mut self, seq: &str) {
+        /*
         let bseq: Vec<u8> = seq
             .chars()
             .map(|c| *(AbpoaAligner::NT4_TABLE).get(c as usize).unwrap())
             .collect();
+        */
+
+        let bseq: Vec<u8> = AbpoaAligner::convert_seq_to_bseq(seq);
 
         // First add the nodes to the graph
         // NOTE: in abpoa, each node has length 1 (i.e. a single nucleotide)
@@ -583,7 +601,7 @@ impl AbpoaAligner {
             best_score: 0,
         };
 
-        abpoa_align_sequence_to_graph(
+        let aln_ok = abpoa_align_sequence_to_graph(
             self.ab,
             self.abpt,
             bseq.as_mut_ptr(),
@@ -591,10 +609,15 @@ impl AbpoaAligner {
             &mut res,
         );
 
+        if aln_ok != 0 {
+            panic!("Alignment did not work correctly!");
+        }
+
         // Get cigars represented as integers
         let cigar_integers: Vec<u64> = (0..res.n_cigar)
             .map(|i| *res.graph_cigar.add(i as usize))
             .collect();
+        println!("Cigar integers len: {}", cigar_integers.len());
 
         // De-allocate cigar (once we have the integers, it is no longer needed)
         if res.n_cigar > 0 {
@@ -606,6 +629,7 @@ impl AbpoaAligner {
             .into_iter()
             .filter_map(|curr_cigar| {
                 let op = (curr_cigar & 0xf) as u32;
+                println!("Found op: {}", op);
                 let mut node_id: Option<i32> = None;
                 let mut query_id: Option<i32> = None;
                 let mut op_len: Option<i32> = None;
@@ -776,6 +800,7 @@ impl AbpoaAligner {
             } else {
                 match char {
                     'M' => match_count += 1,
+                    // TODO: fix out of bounds here
                     'I' => tmp_string.push(seq.char_indices().nth(i).unwrap().1),
                     'D' => {
                         let id = abpoa_ids.get(i).unwrap();
@@ -1526,7 +1551,28 @@ mod tests {
     }
 
     #[test]
-    fn test_validate() {
+    fn test_validate_0() {
+        // Funziona come abpoa (grafo con path)
+        unsafe {
+            let nodes = vec!["ACG"];
+            let edges = vec![];
+
+            let mut aligner = AbpoaAligner::new_with_example_params();
+            aligner.add_nodes_edges(&nodes, &edges);
+            //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+            //println!("");
+            //println!("");
+
+            let query = "GTT";
+            let result = aligner.align_sequence(query);
+
+            //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+            //println!("Result: {:#?}", result);
+        }
+    }
+
+    #[test]
+    fn test_validate_1() {
         // Funziona come abpoa (grafo con path)
         unsafe {
             let nodes = vec!["ACGT", "TTG", "CGA"];
@@ -1537,7 +1583,7 @@ mod tests {
             //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
             //println!("");
 
-            let query = "CTG";
+            let query = "CGTTT";
             let result = aligner.align_sequence(query);
             //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
             println!("Result: {:#?}", result);
@@ -1555,7 +1601,7 @@ mod tests {
             //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
             //println!("");
 
-            let query = "CTG";
+            let query = "ACGTAAACGATTT";
             let result = aligner.align_sequence(query);
             //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
             println!("Result: {:#?}", result);
@@ -1573,7 +1619,7 @@ mod tests {
             //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
             //println!("");
 
-            let query = "TTG";
+            let query = "TTTTTTG";
             let result = aligner.align_sequence(query);
             //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
             println!("Result: {:#?}", result);
