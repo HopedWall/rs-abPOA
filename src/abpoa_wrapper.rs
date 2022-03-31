@@ -143,7 +143,8 @@ impl AbpoaAlignmentResult {
 
 impl AbpoaAligner {
     pub unsafe fn new() -> Self {
-        AbpoaAligner {
+
+        let aln = AbpoaAligner {
             ab: abpoa_init(),
             abpt: abpoa_init_para(),
             n_nodes: 0,
@@ -152,7 +153,11 @@ impl AbpoaAligner {
             edges: vec![],
             edges_abpoa: vec![],
             abpoa_id_to_abstraction_id: HashMap::new(),
-        }
+        };
+
+        //println!("Init para: {:#?}", *aln.abpt);
+
+        aln
     }
 
     // Initializes the aligner with the example.c params,
@@ -617,7 +622,7 @@ impl AbpoaAligner {
         let cigar_integers: Vec<u64> = (0..res.n_cigar)
             .map(|i| *res.graph_cigar.add(i as usize))
             .collect();
-        println!("Cigar integers len: {}", cigar_integers.len());
+        //println!("Cigar integers len: {}", cigar_integers.len());
 
         // De-allocate cigar (once we have the integers, it is no longer needed)
         if res.n_cigar > 0 {
@@ -629,7 +634,7 @@ impl AbpoaAligner {
             .into_iter()
             .filter_map(|curr_cigar| {
                 let op = (curr_cigar & 0xf) as u32;
-                println!("Found op: {}", op);
+                //println!("Found op: {}", op);
                 let mut node_id: Option<i32> = None;
                 let mut query_id: Option<i32> = None;
                 let mut op_len: Option<i32> = None;
@@ -678,7 +683,7 @@ impl AbpoaAligner {
                     Some(op_char) => {
                         let record =
                             AbpoaGraphCigar::cigar_from_params(op_char, node_id, query_id, op_len);
-                        println!("Found cigar record: {:?}", record);
+                        //println!("Found cigar record: {:?}", record);
                         Some(record)
                     }
                     _ => None,
@@ -775,6 +780,7 @@ impl AbpoaAligner {
 
         // Obtain cs string
         let mut cs_string = String::new();
+        /*
         let mut match_count = 1;
         let mut tmp_string: String = String::new();
         let mut last_char = ' ';
@@ -820,6 +826,7 @@ impl AbpoaAligner {
         }
 
         //assert_eq!(abpoa_ids.len(), graph_ids.len());
+         */
 
         AbpoaAlignmentResult::new_with_params(
             new_cigar_string.as_str(),
@@ -1566,7 +1573,7 @@ mod tests {
             let query = "GTT";
             let result = aligner.align_sequence(query);
 
-            //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+            //abpoa_Fgenerate_gfa(aligner.ab, aligner.abpt, stdout);
             //println!("Result: {:#?}", result);
         }
     }
@@ -1575,7 +1582,7 @@ mod tests {
     fn test_validate_1() {
         // Funziona come abpoa (grafo con path)
         unsafe {
-            let nodes = vec!["ACGT", "TTG", "CGA"];
+            let nodes = vec!["ACGA", "TTG", "CGA"];
             let edges = vec![(0, 1), (1, 2)];
 
             let mut aligner = AbpoaAligner::new_with_example_params();
@@ -1583,7 +1590,7 @@ mod tests {
             //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
             //println!("");
 
-            let query = "CGTTT";
+            let query = "ACGA";
             let result = aligner.align_sequence(query);
             //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
             println!("Result: {:#?}", result);
