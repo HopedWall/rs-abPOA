@@ -1,10 +1,4 @@
-use crate::abpoa::{
-    abpoa_add_graph_edge, abpoa_add_graph_node, abpoa_align_sequence_to_graph, abpoa_dump_pog,
-    abpoa_free, abpoa_free_para, abpoa_init, abpoa_init_para, abpoa_msa, abpoa_para_t,
-    abpoa_post_set_para, abpoa_res_t, abpoa_t, free, strdup, ABPOA_CDEL, ABPOA_CDIFF,
-    ABPOA_CHARD_CLIP, ABPOA_CINS, ABPOA_CMATCH, ABPOA_CSOFT_CLIP, ABPOA_SINK_NODE_ID,
-    ABPOA_SRC_NODE_ID, FILE,
-};
+use crate::abpoa::{abpoa_add_graph_edge, abpoa_add_graph_node, abpoa_align_sequence_to_graph, abpoa_dump_pog, abpoa_free, abpoa_free_para, abpoa_init, abpoa_init_para, abpoa_msa, abpoa_para_t, abpoa_post_set_para, abpoa_res_t, abpoa_t, free, strdup, ABPOA_CDEL, ABPOA_CDIFF, ABPOA_CHARD_CLIP, ABPOA_CINS, ABPOA_CMATCH, ABPOA_CSOFT_CLIP, ABPOA_SINK_NODE_ID, ABPOA_SRC_NODE_ID, FILE, ABPOA_LOCAL_MODE};
 //use rayon::prelude::*;
 use std::collections::HashMap;
 use std::ffi::{c_void, CString};
@@ -86,9 +80,11 @@ impl AbpoaCons {
 pub struct AbpoaAlignmentResult {
     pub cigar: String,
     pub abpoa_nodes: Vec<i32>,
-    pub graph_nodes: Vec<usize>,
     pub node_s: i32,
     pub node_e: i32,
+    pub graph_nodes: Vec<usize>,
+    pub aln_start_offset: usize,
+    pub aln_end_offset: usize,
     pub query_s: i32,
     pub query_e: i32,
     pub n_aligned_bases: i32,
@@ -103,9 +99,11 @@ impl AbpoaAlignmentResult {
         AbpoaAlignmentResult {
             cigar: "".to_string(),
             abpoa_nodes: vec![],
-            graph_nodes: vec![],
             node_s: 0,
             node_e: 0,
+            graph_nodes: vec![],
+            aln_start_offset: 0,
+            aln_end_offset: 0,
             query_s: 0,
             query_e: 0,
             n_aligned_bases: 0,
@@ -120,6 +118,8 @@ impl AbpoaAlignmentResult {
         cigar: &str,
         abpoa_nodes: Vec<i32>,
         graph_nodes: Vec<usize>,
+        aln_start_offset: usize,
+        aln_end_offset: usize,
         res: &abpoa_res_t,
         cigar_vec: Vec<char>,
         cs_string: &str,
@@ -127,9 +127,11 @@ impl AbpoaAlignmentResult {
         AbpoaAlignmentResult {
             cigar: cigar.to_string(),
             abpoa_nodes,
-            graph_nodes,
             node_s: res.node_s,
             node_e: res.node_e,
+            graph_nodes,
+            aln_start_offset,
+            aln_end_offset,
             query_s: res.query_s,
             query_e: res.query_e,
             n_aligned_bases: res.n_aln_bases,
@@ -172,6 +174,7 @@ impl AbpoaAligner {
         aligner.set_k(9);
         aligner.set_min_w(10);
         aligner.set_progressive_poa(true);
+        //(*aligner.abpt).align_mode = ABPOA_LOCAL_MODE as c_int;
         aligner.set_post_para();
 
         aligner
@@ -702,6 +705,22 @@ impl AbpoaAligner {
             .collect();
         //println!("Graph ids: {:#?}", graph_ids);
 
+        let mut first_node_offset: usize = 0;
+        let mut last_node_offset: usize = 0;
+        if res.n_cigar > 0 {
+            // Find start and end offset (relative to abstraction nodes)
+            let first_abstraction_node: usize = *graph_ids.first().unwrap();
+            let first_abpoa_node: i32 = *abpoa_ids.first().unwrap();
+            let first_node_ids: Vec<i32> = self.nodes.get(first_abstraction_node).unwrap().clone();
+            first_node_offset = first_node_ids.iter().position(|id| *id == first_abpoa_node).unwrap();
+
+            let last_abstraction_node: usize = *graph_ids.last().unwrap();
+            let last_abpoa_node: i32 = *abpoa_ids.last().unwrap();
+            let last_node_ids: Vec<i32> = self.nodes.get(last_abstraction_node).unwrap().clone();
+            last_node_offset = last_node_ids.iter().position(|id| *id == last_abpoa_node).unwrap();
+        }
+
+
         /*
         let new_cigar_string : Vec<Option<AbpoaGraphCigar>> =
             once(None)
@@ -832,6 +851,8 @@ impl AbpoaAligner {
             new_cigar_string.as_str(),
             abpoa_ids,
             graph_ids,
+            first_node_offset,
+            last_node_offset,
             &res,
             cigar_vec,
             cs_string.as_str(),
@@ -1241,6 +1262,8 @@ mod tests {
                 cigar_string.as_str(),
                 abpoa_ids,
                 graph_ids,
+                0,
+                0,
                 &res,
                 cigar_vec,
                 String::new().as_str(),
@@ -1387,6 +1410,8 @@ mod tests {
                 cigar_string.as_str(),
                 abpoa_ids,
                 graph_ids,
+                0,
+                0,
                 &res,
                 cigar_vec,
                 String::new().as_str(),
@@ -1758,6 +1783,37 @@ mod tests {
         unsafe {
             let mut aligner = AbpoaAligner::new_with_example_params();
             aligner.read_graph_from_file(&PathBuf::from("test/graph.gfa"));
+        }
+    }
+
+    #[test]
+    fn test_offsets_aln() {
+        unsafe {
+            let nodes = vec!["ACGT", "TTG", "CGA"];
+            let edges = vec![(0, 1), (1, 2)];
+            let query = "CGTTTGCG";
+
+            let total_node_length: usize = nodes.iter().map(|x| x.len()).sum();
+
+            let res = AbpoaAligner::create_align_safe(&nodes, &edges, &query);
+            assert_eq!(res.aln_start_offset, 1);
+            // TODO: fix this
+            //assert_eq!(res.aln_end_offset, 1);
+        }
+    }
+
+    #[test]
+    fn test_offsets_aln_2() {
+        unsafe {
+            let nodes = vec!["ACGTTTTCGA"];
+            let edges = vec![];
+            let query = "TTTTCGA";
+
+            let total_node_length: usize = nodes.iter().map(|x| x.len()).sum();
+
+            let res = AbpoaAligner::create_align_safe(&nodes, &edges, &query);
+            assert_eq!(res.aln_start_offset, 3);
+            assert_eq!(res.aln_end_offset, 9);
         }
     }
 }
