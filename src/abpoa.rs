@@ -98,6 +98,10 @@ pub const __USE_POSIX199506: u32 = 1;
 pub const __USE_XOPEN2K: u32 = 1;
 pub const __USE_XOPEN2K8: u32 = 1;
 pub const _ATFILE_SOURCE: u32 = 1;
+pub const __WORDSIZE: u32 = 64;
+pub const __WORDSIZE_TIME64_COMPAT32: u32 = 1;
+pub const __SYSCALL_WORDSIZE: u32 = 64;
+pub const __TIMESIZE: u32 = 64;
 pub const __USE_MISC: u32 = 1;
 pub const __USE_ATFILE: u32 = 1;
 pub const __USE_FORTIFY_LEVEL: u32 = 0;
@@ -109,27 +113,25 @@ pub const __STDC_IEC_559_COMPLEX__: u32 = 1;
 pub const __STDC_ISO_10646__: u32 = 201706;
 pub const __GNU_LIBRARY__: u32 = 6;
 pub const __GLIBC__: u32 = 2;
-pub const __GLIBC_MINOR__: u32 = 31;
+pub const __GLIBC_MINOR__: u32 = 34;
 pub const _SYS_CDEFS_H: u32 = 1;
 pub const __glibc_c99_flexarr_available: u32 = 1;
-pub const __WORDSIZE: u32 = 64;
-pub const __WORDSIZE_TIME64_COMPAT32: u32 = 1;
-pub const __SYSCALL_WORDSIZE: u32 = 64;
-pub const __LONG_DOUBLE_USES_FLOAT128: u32 = 0;
+pub const __LDOUBLE_REDIRECTS_TO_FLOAT128_ABI: u32 = 0;
 pub const __HAVE_GENERIC_SELECTION: u32 = 1;
 pub const __GLIBC_USE_LIB_EXT2: u32 = 0;
 pub const __GLIBC_USE_IEC_60559_BFP_EXT: u32 = 0;
 pub const __GLIBC_USE_IEC_60559_BFP_EXT_C2X: u32 = 0;
+pub const __GLIBC_USE_IEC_60559_EXT: u32 = 0;
 pub const __GLIBC_USE_IEC_60559_FUNCS_EXT: u32 = 0;
 pub const __GLIBC_USE_IEC_60559_FUNCS_EXT_C2X: u32 = 0;
 pub const __GLIBC_USE_IEC_60559_TYPES_EXT: u32 = 0;
 pub const _BITS_TYPES_H: u32 = 1;
-pub const __TIMESIZE: u32 = 64;
 pub const _BITS_TYPESIZES_H: u32 = 1;
 pub const __OFF_T_MATCHES_OFF64_T: u32 = 1;
 pub const __INO_T_MATCHES_INO64_T: u32 = 1;
 pub const __RLIM_T_MATCHES_RLIM64_T: u32 = 1;
 pub const __STATFS_MATCHES_STATFS64: u32 = 1;
+pub const __KERNEL_OLD_TIMEVAL_MATCHES_TIMEVAL64: u32 = 1;
 pub const __FD_SETSIZE: u32 = 1024;
 pub const _BITS_TIME64_H: u32 = 1;
 pub const _BITS_WCHAR_H: u32 = 1;
@@ -182,7 +184,6 @@ pub const WNOWAIT: u32 = 16777216;
 pub const __WNOTHREAD: u32 = 536870912;
 pub const __WALL: u32 = 1073741824;
 pub const __WCLONE: u32 = 2147483648;
-pub const __ENUM_IDTYPE_T: u32 = 1;
 pub const __W_CONTINUED: u32 = 65535;
 pub const __WCOREFLAG: u32 = 128;
 pub const __HAVE_FLOAT128: u32 = 0;
@@ -227,7 +228,6 @@ pub const BYTE_ORDER: u32 = 1234;
 pub const _BITS_BYTESWAP_H: u32 = 1;
 pub const _BITS_UINTN_IDENTITY_H: u32 = 1;
 pub const _SYS_SELECT_H: u32 = 1;
-pub const __FD_ZERO_STOS: &'static [u8; 6usize] = b"stosq\0";
 pub const __sigset_t_defined: u32 = 1;
 pub const __timeval_defined: u32 = 1;
 pub const _STRUCT_TIMESPEC: u32 = 1;
@@ -618,6 +618,7 @@ pub type __id_t = ::std::os::raw::c_uint;
 pub type __time_t = ::std::os::raw::c_long;
 pub type __useconds_t = ::std::os::raw::c_uint;
 pub type __suseconds_t = ::std::os::raw::c_long;
+pub type __suseconds64_t = ::std::os::raw::c_long;
 pub type __daddr_t = ::std::os::raw::c_int;
 pub type __key_t = ::std::os::raw::c_int;
 pub type __clockid_t = ::std::os::raw::c_int;
@@ -658,10 +659,6 @@ pub type intmax_t = __intmax_t;
 pub type uintmax_t = __uintmax_t;
 pub type size_t = ::std::os::raw::c_ulong;
 pub type wchar_t = ::std::os::raw::c_int;
-pub const idtype_t_P_ALL: idtype_t = 0;
-pub const idtype_t_P_PID: idtype_t = 1;
-pub const idtype_t_P_PGID: idtype_t = 2;
-pub type idtype_t = u32;
 pub type _Float32 = f32;
 pub type _Float64 = f64;
 pub type _Float32x = f64;
@@ -1661,6 +1658,36 @@ fn bindgen_test_layout___pthread_cond_s() {
         )
     );
 }
+pub type __tss_t = ::std::os::raw::c_uint;
+pub type __thrd_t = ::std::os::raw::c_ulong;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct __once_flag {
+    pub __data: ::std::os::raw::c_int,
+}
+#[test]
+fn bindgen_test_layout___once_flag() {
+    assert_eq!(
+        ::std::mem::size_of::<__once_flag>(),
+        4usize,
+        concat!("Size of: ", stringify!(__once_flag))
+    );
+    assert_eq!(
+        ::std::mem::align_of::<__once_flag>(),
+        4usize,
+        concat!("Alignment of ", stringify!(__once_flag))
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<__once_flag>())).__data as *const _ as usize },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(__once_flag),
+            "::",
+            stringify!(__data)
+        )
+    );
+}
 pub type pthread_t = ::std::os::raw::c_ulong;
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -2369,14 +2396,14 @@ extern "C" {
     ) -> *mut ::std::os::raw::c_void;
 }
 extern "C" {
+    pub fn free(__ptr: *mut ::std::os::raw::c_void);
+}
+extern "C" {
     pub fn reallocarray(
         __ptr: *mut ::std::os::raw::c_void,
         __nmemb: size_t,
         __size: size_t,
     ) -> *mut ::std::os::raw::c_void;
-}
-extern "C" {
-    pub fn free(__ptr: *mut ::std::os::raw::c_void);
 }
 extern "C" {
     pub fn alloca(__size: ::std::os::raw::c_ulong) -> *mut ::std::os::raw::c_void;
@@ -2392,7 +2419,10 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
-    pub fn aligned_alloc(__alignment: size_t, __size: size_t) -> *mut ::std::os::raw::c_void;
+    pub fn aligned_alloc(
+        __alignment: ::std::os::raw::c_ulong,
+        __size: ::std::os::raw::c_ulong,
+    ) -> *mut ::std::os::raw::c_void;
 }
 extern "C" {
     pub fn abort();
@@ -2641,6 +2671,56 @@ extern "C" {
 }
 extern "C" {
     pub fn __errno_location() -> *mut ::std::os::raw::c_int;
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct __uintr_frame {
+    pub rip: ::std::os::raw::c_ulonglong,
+    pub rflags: ::std::os::raw::c_ulonglong,
+    pub rsp: ::std::os::raw::c_ulonglong,
+}
+#[test]
+fn bindgen_test_layout___uintr_frame() {
+    assert_eq!(
+        ::std::mem::size_of::<__uintr_frame>(),
+        24usize,
+        concat!("Size of: ", stringify!(__uintr_frame))
+    );
+    assert_eq!(
+        ::std::mem::align_of::<__uintr_frame>(),
+        8usize,
+        concat!("Alignment of ", stringify!(__uintr_frame))
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<__uintr_frame>())).rip as *const _ as usize },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(__uintr_frame),
+            "::",
+            stringify!(rip)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<__uintr_frame>())).rflags as *const _ as usize },
+        8usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(__uintr_frame),
+            "::",
+            stringify!(rflags)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<__uintr_frame>())).rsp as *const _ as usize },
+        16usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(__uintr_frame),
+            "::",
+            stringify!(rsp)
+        )
+    );
 }
 pub type __m64 = [::std::os::raw::c_longlong; 1usize];
 pub type __v1di = [::std::os::raw::c_longlong; 1usize];
@@ -3003,6 +3083,60 @@ pub type __m512bh = [::std::os::raw::c_short; 32usize];
 pub type __m256bh = [::std::os::raw::c_short; 16usize];
 pub type __bfloat16 = ::std::os::raw::c_ushort;
 pub type __m128bh = [::std::os::raw::c_short; 8usize];
+pub type _tile1024i = [::std::os::raw::c_int; 256usize];
+#[repr(C)]
+#[repr(align(64))]
+#[derive(Copy, Clone)]
+pub struct __tile1024i_str {
+    pub row: ::std::os::raw::c_ushort,
+    pub col: ::std::os::raw::c_ushort,
+    pub __bindgen_padding_0: [u64; 7usize],
+    pub tile: _tile1024i,
+}
+#[test]
+fn bindgen_test_layout___tile1024i_str() {
+    assert_eq!(
+        ::std::mem::size_of::<__tile1024i_str>(),
+        1088usize,
+        concat!("Size of: ", stringify!(__tile1024i_str))
+    );
+    assert_eq!(
+        ::std::mem::align_of::<__tile1024i_str>(),
+        64usize,
+        concat!("Alignment of ", stringify!(__tile1024i_str))
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<__tile1024i_str>())).row as *const _ as usize },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(__tile1024i_str),
+            "::",
+            stringify!(row)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<__tile1024i_str>())).col as *const _ as usize },
+        2usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(__tile1024i_str),
+            "::",
+            stringify!(col)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<__tile1024i_str>())).tile as *const _ as usize },
+        64usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(__tile1024i_str),
+            "::",
+            stringify!(tile)
+        )
+    );
+}
+pub type __tile1024i = __tile1024i_str;
 pub type va_list = __builtin_va_list;
 pub type __gnuc_va_list = __builtin_va_list;
 #[repr(C)]
@@ -3548,10 +3682,13 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    pub fn fclose(__stream: *mut FILE) -> ::std::os::raw::c_int;
+}
+extern "C" {
     pub fn tmpfile() -> *mut FILE;
 }
 extern "C" {
-    pub fn tmpnam(__s: *mut ::std::os::raw::c_char) -> *mut ::std::os::raw::c_char;
+    pub fn tmpnam(arg1: *mut ::std::os::raw::c_char) -> *mut ::std::os::raw::c_char;
 }
 extern "C" {
     pub fn tmpnam_r(__s: *mut ::std::os::raw::c_char) -> *mut ::std::os::raw::c_char;
@@ -3561,9 +3698,6 @@ extern "C" {
         __dir: *const ::std::os::raw::c_char,
         __pfx: *const ::std::os::raw::c_char,
     ) -> *mut ::std::os::raw::c_char;
-}
-extern "C" {
-    pub fn fclose(__stream: *mut FILE) -> ::std::os::raw::c_int;
 }
 extern "C" {
     pub fn fflush(__stream: *mut FILE) -> ::std::os::raw::c_int;
@@ -3930,25 +4064,19 @@ extern "C" {
     pub fn perror(__s: *const ::std::os::raw::c_char);
 }
 extern "C" {
-    pub static mut sys_nerr: ::std::os::raw::c_int;
-}
-extern "C" {
-    pub static mut sys_errlist: [*const ::std::os::raw::c_char; 0usize];
-}
-extern "C" {
     pub fn fileno(__stream: *mut FILE) -> ::std::os::raw::c_int;
 }
 extern "C" {
     pub fn fileno_unlocked(__stream: *mut FILE) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    pub fn pclose(__stream: *mut FILE) -> ::std::os::raw::c_int;
+}
+extern "C" {
     pub fn popen(
         __command: *const ::std::os::raw::c_char,
         __modes: *const ::std::os::raw::c_char,
     ) -> *mut FILE;
-}
-extern "C" {
-    pub fn pclose(__stream: *mut FILE) -> ::std::os::raw::c_int;
 }
 extern "C" {
     pub fn ctermid(__s: *mut ::std::os::raw::c_char) -> *mut ::std::os::raw::c_char;
@@ -4501,14 +4629,15 @@ pub struct abpoa_para_t {
     pub out_pog: *mut ::std::os::raw::c_char,
     pub align_mode: ::std::os::raw::c_int,
     pub gap_mode: ::std::os::raw::c_int,
-    pub cons_agrm: ::std::os::raw::c_int,
+    pub max_n_cons: ::std::os::raw::c_int,
     pub min_freq: f64,
+    pub verbose: ::std::os::raw::c_int,
 }
 #[test]
 fn bindgen_test_layout_abpoa_para_t() {
     assert_eq!(
         ::std::mem::size_of::<abpoa_para_t>(),
-        136usize,
+        144usize,
         concat!("Size of: ", stringify!(abpoa_para_t))
     );
     assert_eq!(
@@ -4757,13 +4886,13 @@ fn bindgen_test_layout_abpoa_para_t() {
         )
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<abpoa_para_t>())).cons_agrm as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<abpoa_para_t>())).max_n_cons as *const _ as usize },
         120usize,
         concat!(
             "Offset of field: ",
             stringify!(abpoa_para_t),
             "::",
-            stringify!(cons_agrm)
+            stringify!(max_n_cons)
         )
     );
     assert_eq!(
@@ -4774,6 +4903,16 @@ fn bindgen_test_layout_abpoa_para_t() {
             stringify!(abpoa_para_t),
             "::",
             stringify!(min_freq)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<abpoa_para_t>())).verbose as *const _ as usize },
+        136usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(abpoa_para_t),
+            "::",
+            stringify!(verbose)
         )
     );
 }
@@ -4812,102 +4951,80 @@ impl abpoa_para_t {
         }
     }
     #[inline]
-    pub fn out_msa_header(&self) -> u8 {
+    pub fn out_cons(&self) -> u8 {
         unsafe { ::std::mem::transmute(self._bitfield_1.get(3usize, 1u8) as u8) }
     }
     #[inline]
-    pub fn set_out_msa_header(&mut self, val: u8) {
+    pub fn set_out_cons(&mut self, val: u8) {
         unsafe {
             let val: u8 = ::std::mem::transmute(val);
             self._bitfield_1.set(3usize, 1u8, val as u64)
         }
     }
     #[inline]
-    pub fn out_cons(&self) -> u8 {
+    pub fn out_gfa(&self) -> u8 {
         unsafe { ::std::mem::transmute(self._bitfield_1.get(4usize, 1u8) as u8) }
     }
     #[inline]
-    pub fn set_out_cons(&mut self, val: u8) {
+    pub fn set_out_gfa(&mut self, val: u8) {
         unsafe {
             let val: u8 = ::std::mem::transmute(val);
             self._bitfield_1.set(4usize, 1u8, val as u64)
         }
     }
     #[inline]
-    pub fn out_gfa(&self) -> u8 {
+    pub fn out_fq(&self) -> u8 {
         unsafe { ::std::mem::transmute(self._bitfield_1.get(5usize, 1u8) as u8) }
     }
     #[inline]
-    pub fn set_out_gfa(&mut self, val: u8) {
+    pub fn set_out_fq(&mut self, val: u8) {
         unsafe {
             let val: u8 = ::std::mem::transmute(val);
             self._bitfield_1.set(5usize, 1u8, val as u64)
         }
     }
     #[inline]
-    pub fn is_diploid(&self) -> u8 {
+    pub fn use_read_ids(&self) -> u8 {
         unsafe { ::std::mem::transmute(self._bitfield_1.get(6usize, 1u8) as u8) }
     }
     #[inline]
-    pub fn set_is_diploid(&mut self, val: u8) {
+    pub fn set_use_read_ids(&mut self, val: u8) {
         unsafe {
             let val: u8 = ::std::mem::transmute(val);
             self._bitfield_1.set(6usize, 1u8, val as u64)
         }
     }
     #[inline]
-    pub fn use_read_ids(&self) -> u8 {
+    pub fn amb_strand(&self) -> u8 {
         unsafe { ::std::mem::transmute(self._bitfield_1.get(7usize, 1u8) as u8) }
     }
     #[inline]
-    pub fn set_use_read_ids(&mut self, val: u8) {
+    pub fn set_amb_strand(&mut self, val: u8) {
         unsafe {
             let val: u8 = ::std::mem::transmute(val);
             self._bitfield_1.set(7usize, 1u8, val as u64)
         }
     }
     #[inline]
-    pub fn amb_strand(&self) -> u8 {
+    pub fn disable_seeding(&self) -> u8 {
         unsafe { ::std::mem::transmute(self._bitfield_1.get(8usize, 1u8) as u8) }
     }
     #[inline]
-    pub fn set_amb_strand(&mut self, val: u8) {
+    pub fn set_disable_seeding(&mut self, val: u8) {
         unsafe {
             let val: u8 = ::std::mem::transmute(val);
             self._bitfield_1.set(8usize, 1u8, val as u64)
         }
     }
     #[inline]
-    pub fn disable_seeding(&self) -> u8 {
-        unsafe { ::std::mem::transmute(self._bitfield_1.get(9usize, 1u8) as u8) }
-    }
-    #[inline]
-    pub fn set_disable_seeding(&mut self, val: u8) {
-        unsafe {
-            let val: u8 = ::std::mem::transmute(val);
-            self._bitfield_1.set(9usize, 1u8, val as u64)
-        }
-    }
-    #[inline]
     pub fn progressive_poa(&self) -> u8 {
-        unsafe { ::std::mem::transmute(self._bitfield_1.get(10usize, 1u8) as u8) }
+        unsafe { ::std::mem::transmute(self._bitfield_1.get(9usize, 1u8) as u8) }
     }
     #[inline]
     pub fn set_progressive_poa(&mut self, val: u8) {
         unsafe {
             let val: u8 = ::std::mem::transmute(val);
-            self._bitfield_1.set(10usize, 1u8, val as u64)
-        }
-    }
-    #[inline]
-    pub fn out_fq(&self) -> u8 {
-        unsafe { ::std::mem::transmute(self._bitfield_1.get(11usize, 1u8) as u8) }
-    }
-    #[inline]
-    pub fn set_out_fq(&mut self, val: u8) {
-        unsafe {
-            let val: u8 = ::std::mem::transmute(val);
-            self._bitfield_1.set(11usize, 1u8, val as u64)
+            self._bitfield_1.set(9usize, 1u8, val as u64)
         }
     }
     #[inline]
@@ -4915,15 +5032,13 @@ impl abpoa_para_t {
         ret_cigar: u8,
         rev_cigar: u8,
         out_msa: u8,
-        out_msa_header: u8,
         out_cons: u8,
         out_gfa: u8,
-        is_diploid: u8,
+        out_fq: u8,
         use_read_ids: u8,
         amb_strand: u8,
         disable_seeding: u8,
         progressive_poa: u8,
-        out_fq: u8,
     ) -> __BindgenBitfieldUnit<[u8; 2usize], u8> {
         let mut __bindgen_bitfield_unit: __BindgenBitfieldUnit<[u8; 2usize], u8> =
             Default::default();
@@ -4940,40 +5055,32 @@ impl abpoa_para_t {
             out_msa as u64
         });
         __bindgen_bitfield_unit.set(3usize, 1u8, {
-            let out_msa_header: u8 = unsafe { ::std::mem::transmute(out_msa_header) };
-            out_msa_header as u64
-        });
-        __bindgen_bitfield_unit.set(4usize, 1u8, {
             let out_cons: u8 = unsafe { ::std::mem::transmute(out_cons) };
             out_cons as u64
         });
-        __bindgen_bitfield_unit.set(5usize, 1u8, {
+        __bindgen_bitfield_unit.set(4usize, 1u8, {
             let out_gfa: u8 = unsafe { ::std::mem::transmute(out_gfa) };
             out_gfa as u64
         });
-        __bindgen_bitfield_unit.set(6usize, 1u8, {
-            let is_diploid: u8 = unsafe { ::std::mem::transmute(is_diploid) };
-            is_diploid as u64
+        __bindgen_bitfield_unit.set(5usize, 1u8, {
+            let out_fq: u8 = unsafe { ::std::mem::transmute(out_fq) };
+            out_fq as u64
         });
-        __bindgen_bitfield_unit.set(7usize, 1u8, {
+        __bindgen_bitfield_unit.set(6usize, 1u8, {
             let use_read_ids: u8 = unsafe { ::std::mem::transmute(use_read_ids) };
             use_read_ids as u64
         });
-        __bindgen_bitfield_unit.set(8usize, 1u8, {
+        __bindgen_bitfield_unit.set(7usize, 1u8, {
             let amb_strand: u8 = unsafe { ::std::mem::transmute(amb_strand) };
             amb_strand as u64
         });
-        __bindgen_bitfield_unit.set(9usize, 1u8, {
+        __bindgen_bitfield_unit.set(8usize, 1u8, {
             let disable_seeding: u8 = unsafe { ::std::mem::transmute(disable_seeding) };
             disable_seeding as u64
         });
-        __bindgen_bitfield_unit.set(10usize, 1u8, {
+        __bindgen_bitfield_unit.set(9usize, 1u8, {
             let progressive_poa: u8 = unsafe { ::std::mem::transmute(progressive_poa) };
             progressive_poa as u64
-        });
-        __bindgen_bitfield_unit.set(11usize, 1u8, {
-            let out_fq: u8 = unsafe { ::std::mem::transmute(out_fq) };
-            out_fq as u64
         });
         __bindgen_bitfield_unit
     }
@@ -4988,9 +5095,8 @@ pub struct abpoa_node_t {
     pub out_edge_n: ::std::os::raw::c_int,
     pub out_edge_m: ::std::os::raw::c_int,
     pub out_id: *mut ::std::os::raw::c_int,
-    pub max_out_id: ::std::os::raw::c_int,
     pub out_weight: *mut ::std::os::raw::c_int,
-    pub read_ids: *mut u64,
+    pub read_ids: *mut *mut u64,
     pub read_ids_n: ::std::os::raw::c_int,
     pub aligned_node_n: ::std::os::raw::c_int,
     pub aligned_node_m: ::std::os::raw::c_int,
@@ -5001,7 +5107,7 @@ pub struct abpoa_node_t {
 fn bindgen_test_layout_abpoa_node_t() {
     assert_eq!(
         ::std::mem::size_of::<abpoa_node_t>(),
-        96usize,
+        88usize,
         concat!("Size of: ", stringify!(abpoa_node_t))
     );
     assert_eq!(
@@ -5080,18 +5186,8 @@ fn bindgen_test_layout_abpoa_node_t() {
         )
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<abpoa_node_t>())).max_out_id as *const _ as usize },
-        40usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(abpoa_node_t),
-            "::",
-            stringify!(max_out_id)
-        )
-    );
-    assert_eq!(
         unsafe { &(*(::std::ptr::null::<abpoa_node_t>())).out_weight as *const _ as usize },
-        48usize,
+        40usize,
         concat!(
             "Offset of field: ",
             stringify!(abpoa_node_t),
@@ -5101,7 +5197,7 @@ fn bindgen_test_layout_abpoa_node_t() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<abpoa_node_t>())).read_ids as *const _ as usize },
-        56usize,
+        48usize,
         concat!(
             "Offset of field: ",
             stringify!(abpoa_node_t),
@@ -5111,7 +5207,7 @@ fn bindgen_test_layout_abpoa_node_t() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<abpoa_node_t>())).read_ids_n as *const _ as usize },
-        64usize,
+        56usize,
         concat!(
             "Offset of field: ",
             stringify!(abpoa_node_t),
@@ -5121,7 +5217,7 @@ fn bindgen_test_layout_abpoa_node_t() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<abpoa_node_t>())).aligned_node_n as *const _ as usize },
-        68usize,
+        60usize,
         concat!(
             "Offset of field: ",
             stringify!(abpoa_node_t),
@@ -5131,7 +5227,7 @@ fn bindgen_test_layout_abpoa_node_t() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<abpoa_node_t>())).aligned_node_m as *const _ as usize },
-        72usize,
+        64usize,
         concat!(
             "Offset of field: ",
             stringify!(abpoa_node_t),
@@ -5141,7 +5237,7 @@ fn bindgen_test_layout_abpoa_node_t() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<abpoa_node_t>())).aligned_node_id as *const _ as usize },
-        80usize,
+        72usize,
         concat!(
             "Offset of field: ",
             stringify!(abpoa_node_t),
@@ -5151,7 +5247,7 @@ fn bindgen_test_layout_abpoa_node_t() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<abpoa_node_t>())).base as *const _ as usize },
-        88usize,
+        80usize,
         concat!(
             "Offset of field: ",
             stringify!(abpoa_node_t),
@@ -5353,6 +5449,144 @@ impl abpoa_graph_t {
         });
         __bindgen_bitfield_unit
     }
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct abpoa_cons_t {
+    pub n_cons: ::std::os::raw::c_int,
+    pub n_seq: ::std::os::raw::c_int,
+    pub msa_len: ::std::os::raw::c_int,
+    pub clu_n_seq: *mut ::std::os::raw::c_int,
+    pub clu_read_ids: *mut *mut ::std::os::raw::c_int,
+    pub cons_len: *mut ::std::os::raw::c_int,
+    pub cons_node_ids: *mut *mut ::std::os::raw::c_int,
+    pub cons_base: *mut *mut u8,
+    pub msa_base: *mut *mut u8,
+    pub cons_cov: *mut *mut ::std::os::raw::c_int,
+    pub cons_phred_score: *mut *mut ::std::os::raw::c_int,
+}
+#[test]
+fn bindgen_test_layout_abpoa_cons_t() {
+    assert_eq!(
+        ::std::mem::size_of::<abpoa_cons_t>(),
+        80usize,
+        concat!("Size of: ", stringify!(abpoa_cons_t))
+    );
+    assert_eq!(
+        ::std::mem::align_of::<abpoa_cons_t>(),
+        8usize,
+        concat!("Alignment of ", stringify!(abpoa_cons_t))
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<abpoa_cons_t>())).n_cons as *const _ as usize },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(abpoa_cons_t),
+            "::",
+            stringify!(n_cons)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<abpoa_cons_t>())).n_seq as *const _ as usize },
+        4usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(abpoa_cons_t),
+            "::",
+            stringify!(n_seq)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<abpoa_cons_t>())).msa_len as *const _ as usize },
+        8usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(abpoa_cons_t),
+            "::",
+            stringify!(msa_len)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<abpoa_cons_t>())).clu_n_seq as *const _ as usize },
+        16usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(abpoa_cons_t),
+            "::",
+            stringify!(clu_n_seq)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<abpoa_cons_t>())).clu_read_ids as *const _ as usize },
+        24usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(abpoa_cons_t),
+            "::",
+            stringify!(clu_read_ids)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<abpoa_cons_t>())).cons_len as *const _ as usize },
+        32usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(abpoa_cons_t),
+            "::",
+            stringify!(cons_len)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<abpoa_cons_t>())).cons_node_ids as *const _ as usize },
+        40usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(abpoa_cons_t),
+            "::",
+            stringify!(cons_node_ids)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<abpoa_cons_t>())).cons_base as *const _ as usize },
+        48usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(abpoa_cons_t),
+            "::",
+            stringify!(cons_base)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<abpoa_cons_t>())).msa_base as *const _ as usize },
+        56usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(abpoa_cons_t),
+            "::",
+            stringify!(msa_base)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<abpoa_cons_t>())).cons_cov as *const _ as usize },
+        64usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(abpoa_cons_t),
+            "::",
+            stringify!(cons_cov)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<abpoa_cons_t>())).cons_phred_score as *const _ as usize },
+        72usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(abpoa_cons_t),
+            "::",
+            stringify!(cons_phred_score)
+        )
+    );
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -5598,12 +5832,13 @@ pub struct abpoa_t {
     pub abg: *mut abpoa_graph_t,
     pub abs: *mut abpoa_seq_t,
     pub abm: *mut abpoa_simd_matrix_t,
+    pub abc: *mut abpoa_cons_t,
 }
 #[test]
 fn bindgen_test_layout_abpoa_t() {
     assert_eq!(
         ::std::mem::size_of::<abpoa_t>(),
-        24usize,
+        32usize,
         concat!("Size of: ", stringify!(abpoa_t))
     );
     assert_eq!(
@@ -5641,6 +5876,16 @@ fn bindgen_test_layout_abpoa_t() {
             stringify!(abm)
         )
     );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<abpoa_t>())).abc as *const _ as usize },
+        24usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(abpoa_t),
+            "::",
+            stringify!(abc)
+        )
+    );
 }
 extern "C" {
     pub fn abpoa_init_para() -> *mut abpoa_para_t;
@@ -5669,12 +5914,6 @@ extern "C" {
         seq_lens: *mut ::std::os::raw::c_int,
         seqs: *mut *mut u8,
         out_fp: *mut FILE,
-        cons_seq: *mut *mut *mut u8,
-        cons_cov: *mut *mut *mut ::std::os::raw::c_int,
-        cons_l: *mut *mut ::std::os::raw::c_int,
-        cons_n: *mut ::std::os::raw::c_int,
-        msa_seq: *mut *mut *mut u8,
-        msa_l: *mut ::std::os::raw::c_int,
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
@@ -5683,20 +5922,10 @@ extern "C" {
         abpt: *mut abpoa_para_t,
         read_fn: *mut ::std::os::raw::c_char,
         out_fp: *mut FILE,
-        cons_seq: *mut *mut *mut u8,
-        cons_cov: *mut *mut *mut ::std::os::raw::c_int,
-        cons_l: *mut *mut ::std::os::raw::c_int,
-        cons_n: *mut ::std::os::raw::c_int,
-        msa_seq: *mut *mut *mut u8,
-        msa_l: *mut ::std::os::raw::c_int,
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
-    pub fn abpoa_reset_graph(
-        ab: *mut abpoa_t,
-        abpt: *mut abpoa_para_t,
-        qlen: ::std::os::raw::c_int,
-    );
+    pub fn abpoa_reset(ab: *mut abpoa_t, abpt: *mut abpoa_para_t, qlen: ::std::os::raw::c_int);
 }
 extern "C" {
     pub fn abpoa_restore_graph(ab: *mut abpoa_t, abpt: *mut abpoa_para_t) -> *mut abpoa_t;
@@ -5792,30 +6021,25 @@ extern "C" {
     pub fn abpoa_topological_sort(abg: *mut abpoa_graph_t, abpt: *mut abpoa_para_t);
 }
 extern "C" {
-    pub fn abpoa_generate_consensus(
-        ab: *mut abpoa_t,
-        abpt: *mut abpoa_para_t,
-        out_fp: *mut FILE,
-        cons_seq: *mut *mut *mut u8,
-        cons_cov: *mut *mut *mut ::std::os::raw::c_int,
-        cons_l: *mut *mut ::std::os::raw::c_int,
-        cons_n: *mut ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
+    pub fn abpoa_generate_consensus(ab: *mut abpoa_t, abpt: *mut abpoa_para_t);
 }
 extern "C" {
-    pub fn abpoa_generate_rc_msa(
-        ab: *mut abpoa_t,
-        abpt: *mut abpoa_para_t,
-        out_fp: *mut FILE,
-        msa_seq: *mut *mut *mut u8,
-        msa_l: *mut ::std::os::raw::c_int,
-    );
+    pub fn abpoa_output_fx_consensus(ab: *mut abpoa_t, abpt: *mut abpoa_para_t, out_fp: *mut FILE);
+}
+extern "C" {
+    pub fn abpoa_generate_rc_msa(ab: *mut abpoa_t, abpt: *mut abpoa_para_t);
+}
+extern "C" {
+    pub fn abpoa_output_rc_msa(ab: *mut abpoa_t, abpt: *mut abpoa_para_t, out_fp: *mut FILE);
 }
 extern "C" {
     pub fn abpoa_generate_gfa(ab: *mut abpoa_t, abpt: *mut abpoa_para_t, out_fp: *mut FILE);
 }
 extern "C" {
-    pub fn abpoa_dump_pog(ab: *mut abpoa_t, abpt: *mut abpoa_para_t) -> ::std::os::raw::c_int;
+    pub fn abpoa_output(ab: *mut abpoa_t, abpt: *mut abpoa_para_t, out_fp: *mut FILE);
+}
+extern "C" {
+    pub fn abpoa_dump_pog(ab: *mut abpoa_t, abpt: *mut abpoa_para_t);
 }
 pub type __builtin_va_list = [__va_list_tag; 1usize];
 #[repr(C)]

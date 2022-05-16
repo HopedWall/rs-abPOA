@@ -15,6 +15,7 @@ cmake = "0.1"
 [dependencies]
 #rayon = "1.5.1"
 gfa = "0.8.0"
+itertools = "0.10.1"
 
 # profiling
 log = { version = "0.4", features = ["max_level_debug", "release_max_level_debug"]}

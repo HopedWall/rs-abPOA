@@ -297,12 +297,6 @@ impl AbpoaAligner {
             seq_lens.as_mut_ptr(),
             bseqs.as_mut_ptr(),
             out,
-            &mut cons_seq,
-            &mut cons_c,
-            &mut cons_l,
-            &mut cons_n,
-            &mut msa_seq,
-            &mut msa_l,
         );
 
         // Read the alignment's results
@@ -356,12 +350,6 @@ impl AbpoaAligner {
             seq_lens.as_mut_ptr(),
             bseqs.as_mut_ptr(),
             out,
-            &mut cons_seq,
-            &mut cons_c,
-            &mut cons_l,
-            &mut cons_n,
-            &mut msa_seq,
-            &mut msa_l,
         );
 
         // Read the consensus
@@ -487,11 +475,26 @@ impl AbpoaAligner {
 
     pub unsafe fn add_nodes_edges(&mut self, nodes: &Vec<&str>, edges: &Vec<(usize, usize)>) {
         let start_add_nodes = Instant::now();
+
         // Add nodes
         nodes.iter().for_each(|n| self.add_nodes_from_seq(n));
         info!(
             "Adding the nodes took: {} ms",
             start_add_nodes.elapsed().as_millis()
+        );
+
+        // Build a HashMap having as keys the abpoa_ids and as values the abstraction_ids
+        let start_map_creation = Instant::now();
+        // TODO: would like to use rayon but it does not like the .get()
+        for abstraction_id in 0..self.nodes.len() {
+            for abpoa_id in self.nodes.get(abstraction_id).unwrap() {
+                self.abpoa_id_to_abstraction_id
+                    .insert(*abpoa_id, abstraction_id);
+            }
+        }
+        info!(
+                "Creating the map took: {} ms",
+                start_map_creation.elapsed().as_millis()
         );
 
         // Add edges between nodes
@@ -541,24 +544,69 @@ impl AbpoaAligner {
                 "Finding heads and tails took: {} ms",
                 start_head_tails.elapsed().as_millis()
             );
-
-            let start_map_creation = Instant::now();
-            // Build a HashMap having as keys the abpoa_ids and as values
-            // the abstraction_id, this will be useful when doing the conversion
-            // TODO: would like to use rayon but it does not like the .get()
-            for abstraction_id in 0..self.nodes.len() {
-                for abpoa_id in self.nodes.get(abstraction_id).unwrap() {
-                    self.abpoa_id_to_abstraction_id
-                        .insert(*abpoa_id, abstraction_id);
-                }
-            }
-            info!(
-                "Creating the map took: {} ms",
-                start_map_creation.elapsed().as_millis()
-            );
         }
     }
 
+    /*
+    // This adds an edge start->node for each abpoa_id in the abstraction nodes with no predecessors
+    pub unsafe fn find_heads(&self) -> Vec<i32> {
+        let abpoa_nodes_without_predecessor: Vec<i32> = self
+            .nodes
+            .clone()
+            .into_iter()
+            .flatten()
+            .filter(|abpoa_node| self.is_head(abpoa_node))
+            .collect();
+        //println!("Abpoa nodes without predecessor: {:?}", abpoa_nodes_without_predecessor);
+        //println!("Abpoa id to abstraction id: {:?}", self.abpoa_id_to_abstraction_id);
+
+        let mut abstraction_nodes_without_predecessor: Vec<usize> = abpoa_nodes_without_predecessor
+            .iter()
+            .map(|node| self.abpoa_id_to_abstraction_id.get(node).unwrap().clone())
+            .collect();
+
+        abstraction_nodes_without_predecessor.sort();
+        abstraction_nodes_without_predecessor.dedup();
+
+        let mut heads: Vec<i32> = vec![];
+        for abs_node in abstraction_nodes_without_predecessor {
+            let abpoa_nodes = self.nodes.get(abs_node).unwrap();
+            abpoa_nodes.iter().for_each(|node| heads.push(*node));
+        }
+
+        heads
+    }
+
+    // This adds an edge end->node for each abpoa_id in the abstraction nodes with no successor
+    pub unsafe fn find_tails(&self) -> Vec<i32> {
+
+        let abpoa_nodes_without_successor: Vec<i32> = self
+            .nodes
+            .clone()
+            .into_iter()
+            .flatten()
+            .filter(|abpoa_node| self.is_tail(abpoa_node))
+            .collect();
+
+        let mut abstraction_nodes_without_successor: Vec<usize> = abpoa_nodes_without_successor
+            .iter()
+            .map(|node| self.abpoa_id_to_abstraction_id.get(node).unwrap().clone())
+            .collect();
+
+        abstraction_nodes_without_successor.sort();
+        abstraction_nodes_without_successor.dedup();
+
+        let mut tails: Vec<i32> = vec![];
+        for abs_node in abstraction_nodes_without_successor {
+            let abpoa_nodes = self.nodes.get(abs_node).unwrap();
+            abpoa_nodes.iter().for_each(|node| tails.push(*node));
+        }
+
+        tails
+    }
+     */
+
+    // This adds an edge start->node for ONLY the first abpoa_id in the abstraction_id without pred.
     pub unsafe fn find_heads(&self) -> Vec<i32> {
         let heads = self
             .nodes
@@ -571,11 +619,7 @@ impl AbpoaAligner {
         heads
     }
 
-    fn is_head(&self, node: &i32) -> bool {
-        let node_appears_as_end_edge = self.edges_abpoa.iter().any(|x| x.1 == *node);
-        return !node_appears_as_end_edge;
-    }
-
+    // This adds an edge node->end for ONLY the last abpoa_id in the abstraction_id without succ.
     pub unsafe fn find_tails(&self) -> Vec<i32> {
         let tails = self
             .nodes
@@ -586,6 +630,11 @@ impl AbpoaAligner {
             .collect();
 
         tails
+    }
+
+    fn is_head(&self, node: &i32) -> bool {
+        let node_appears_as_end_edge = self.edges_abpoa.iter().any(|x| x.1 == *node);
+        return !node_appears_as_end_edge;
     }
 
     fn is_tail(&self, node: &i32) -> bool {
@@ -633,7 +682,7 @@ impl AbpoaAligner {
         }
 
         // Get cigars as records that make sense
-        let cigar_vec_records: Vec<AbpoaGraphCigar> = cigar_integers
+        let cigar_vec_records_temp: Vec<AbpoaGraphCigar> = cigar_integers
             .into_iter()
             .filter_map(|curr_cigar| {
                 let op = (curr_cigar & 0xf) as u32;
@@ -694,6 +743,24 @@ impl AbpoaAligner {
             })
             .collect();
 
+        println!("TEMP is: {:?}", cigar_vec_records_temp.iter().map(|x| x.op).collect::<Vec<char>>());
+
+        // Remove all the deletions on the suffix of the last abstraction node
+        let mut cigar_vec_records: Vec<AbpoaGraphCigar> = vec![];
+        let mut non_del_found = false;
+        // Iterate over aln records until an op != 'D' is found, add everything after that
+        for record in cigar_vec_records_temp.into_iter().rev() {
+            if record.op != 'D' {
+                non_del_found = true;
+            }
+            if non_del_found {
+                cigar_vec_records.push(record);
+            }
+        }
+        // Must reverse since I was adding from end to start
+        cigar_vec_records.reverse();
+
+        println!("Cigar vec records is: {:?}", cigar_vec_records.iter().map(|x| x.op).collect::<Vec<char>>());
         // Get the ids and convert them to abstraction ids
         let abpoa_ids: Vec<i32> = cigar_vec_records.iter().filter_map(|x| x.node_id).collect();
         //println!("Abpoa ids: {:#?}", abpoa_ids);
@@ -959,6 +1026,7 @@ mod tests {
         }
     }
 
+    /*
     // ----- Check msa and consensus ("black-box" version) -----
     #[test]
     fn test_aln() {
@@ -1018,6 +1086,7 @@ mod tests {
             //assert_eq!(aln.msa_length, 75);
         }
     }
+     */
 
     // ----- Test basic abstraction functionalities -----
     #[test]
@@ -1063,6 +1132,7 @@ mod tests {
             let mut aligner = AbpoaAligner::new_with_example_params();
             aligner.add_nodes_edges(&vec!["ACT"], &vec![]);
             let res = aligner.align_sequence("T");
+            println!("Res: {:?}", res);
 
             assert_eq!(res.cigar, String::from("1M"));
             // These are the nodes in abpoa (remember, nodes are 1-base only!)
@@ -1112,31 +1182,14 @@ mod tests {
             let mut aligner = AbpoaAligner::new_with_example_params();
             aligner.add_nodes_edges(&vec!["ACG", "AAA"], &vec![(0, 1)]);
             let res = aligner.align_sequence("ATG");
+            println!("Res: {:?}", res);
 
             //Unexpected but same behavior in C ver
-            assert_eq!(res.cigar, String::from("3M3D"));
+            assert_eq!(res.cigar, String::from("3M"));
             // These are the nodes in abpoa (remember, nodes are 1-base only!)
-            assert_eq!(res.abpoa_nodes, vec![2, 3, 4, 5, 6, 7]);
+            assert_eq!(res.abpoa_nodes, vec![2, 3, 4]);
             // These are the nodes in our graph abstraction (nodes can have length > 1)
-            assert_eq!(res.graph_nodes, vec![0, 0, 0, 1, 1, 1]);
-        }
-    }
-
-    #[test]
-    fn test_alignment_4_multiple_manual() {
-        unsafe {
-            let mut aligner = AbpoaAligner::new_with_example_params();
-            aligner.add_nodes_edges(&vec!["ACG", "AAA"], &vec![(0, 1)]);
-            let res = aligner.align_sequence("ATG");
-
-            // Check against the "manual" version (= less wrapper abstractions used, closer
-            // to the original C impl.)
-            let res_manual = manual_test_multiple_nodes("ACG", "AAA", "ATG");
-            assert_eq!(res.cigar, res_manual.cigar);
-            assert_eq!(res.abpoa_nodes, res_manual.abpoa_nodes);
-
-            // Makes no sense to compare res.graph_nodes because it is an abstraction
-            // only available in Rust
+            assert_eq!(res.graph_nodes, vec![0, 0, 0]);
         }
     }
 
@@ -1424,7 +1477,7 @@ mod tests {
         unsafe {
             let mut aligner = AbpoaAligner::new_with_example_params();
             aligner.add_nodes_edges(&vec!["ACG", "AAA"], &vec![(0, 1)]);
-            abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+            //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
         }
     }
 
@@ -1433,7 +1486,7 @@ mod tests {
         unsafe {
             let mut aligner = AbpoaAligner::new_with_example_params();
             aligner.add_nodes_edges(&vec!["ACG", "AAA", "CC"], &vec![(0, 1)]);
-            abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+            //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
         }
     }
 
@@ -1475,13 +1528,13 @@ mod tests {
                 result.abpoa_nodes,
                 vec![
                     2, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
-                    27, 28, 29, 30, 31
+                    27, 28, 29, 30
                 ]
             );
 
             assert_eq!(
                 result.graph_nodes,
-                vec![0, 2, 2, 2, 2, 4, 4, 4, 4, 4, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 7, 9, 9, 9, 9, 10]
+                vec![0, 2, 2, 2, 2, 4, 4, 4, 4, 4, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 7, 9, 9, 9, 9]
             );
         }
     }
@@ -1555,12 +1608,12 @@ mod tests {
 
             let mut aligner = AbpoaAligner::new_with_example_params();
             aligner.add_nodes_edges(&nodes, &edges);
-            abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+            //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
             println!("");
 
             let query = "ACTTTGCGTTTTTTT";
             let result = aligner.align_sequence(query);
-            abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+            //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
         }
     }
 
@@ -1572,12 +1625,12 @@ mod tests {
 
             let mut aligner = AbpoaAligner::new_with_example_params();
             aligner.add_nodes_edges(&nodes, &edges);
-            abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+            //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
             println!("");
 
             let query = "AAT";
             let result = aligner.align_sequence(query);
-            abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+            //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
             println!("Result: {:#?}", result);
         }
     }
@@ -1757,7 +1810,7 @@ mod tests {
                 (12, 13),
             ];
             aligner.add_nodes_edges(&nodes, &edges);
-            abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
+            //abpoa_generate_gfa(aligner.ab, aligner.abpt, stdout);
             //println!("Edges: {:#?}", aligner.edges_abpoa);
             //println!("Nodes: {:#?}", aligner.abpoa_id_to_abstraction_id);
 
@@ -1814,6 +1867,18 @@ mod tests {
             let res = AbpoaAligner::create_align_safe(&nodes, &edges, &query);
             assert_eq!(res.aln_start_offset, 3);
             assert_eq!(res.aln_end_offset, 9);
+        }
+    }
+
+    #[test]
+    fn figure_out_whats_wrong() {
+        unsafe {
+            let nodes = vec!["CTCCTTCTTGGGCTAGGACTGTGCCCACAGCTGACAGACCTCAAACAGTAGAAGAAACAGGGATGGAGGCCAGAATACCACTCCTCCCTTGGATCAGGAGAGGGAGCTGTCACCTGAGGTACAGGAGATCCTATACCACAGAGTGACTCTCTTAAAGGGCCAGACCTCTCTCAGGGGCAATTAAGGAATCTAGTCTCGCTGGAGATTCCATCCTTCAGATGAACTGATGAGCAGTTCTCTTTGACTCCCAGTATTAGGAATCACGGGGGAGTTTCTCTCGTGCCTGATTCTCAGCCCCACACCAAGAGTTTTTGGAGGTCTGACTCCAGCTTTTCTCAGTCACTCAGCATCCACACAGGCCAGGACCAGAAATCCCTTTTCACCTTCTACCCTGGGCTAGCTCATCCCGATTCTAGAACTTTCCAAGGAATAAGAGGCTATCCCAGATCCCTAAGTCCAGGCTGGTGTCAAGGTTTTGTCCTCTTCTCCTACTATAATTGTCCTCTTCCTTCTCAGGATGGTCACATGGGTGCTGCTGGAGTGTCCCATGAGAGATACAAAGTGCCTGAATTTTCTGACTCTTCCCCTCAGAGCCCCCAAAGACACACGTGACTCACCACCCCATCTCTGACCATGAGGCCACCCTGAGGTGCTGGGCCCTGGGCTTCTACCCTGCGGAGATCACACTGACCTGGCAGCAGGATGGGGAGGGCCATACCCAGGACACGGAGCTCGTGGAGACCAGGCCTGCAGGGGATGGAACCTTCCAGAAGTGGGCAGCTGTGGTGGTGCCTTCTGGAGAGGAGCAGAGATACACGTGCCATGTGCAGCATGAGGGGCTACCCGAGCCCGTCACCCTGAGATGGAGTAAGGAGGGGGATGGGAGGTCATGTCTCTTCTCAGGGAAAGCGGGAGCCCTTCTGGAGCCCTTCCGCAGGGTCAGGGCTGAGGCCTGGGGGTCAGGGCCCCTTACGTTCCCCTCTTTTCCCAGAGCCGGCTTCCCAGCCCACCATCCCCATCGTGGGCATCATTGCTGGCCTGGTTCTCCTTGGATCTGTGGTCTCTGGAGCTGTGGTTGCTGCTGTGATATGGAGGAAGAAGAGCTCAGGTGGGGAAGGGAGAAGGGTGGGGTCTGAGTTTTCTTGTCCCACTGGGTGTTTCAAGCCCTAGGTAAAAGTGTGTCCTGCCTCGTTACTGGGAAGCACCATCCACACACACGAGCCTACCCAGCCTGGGGCCCTGTGTGCCAGCACCTACTCTTTTTTTTTGAGACGGAGTCTTGGCTCTGTCACCCAGGCTGGAGTGCAATGGCGTGGTTTCAGCTCACTGCAACCTCCGCCTCCCAGGTTCAAGCAATTCTCCTGCCTCAGCCTCCCTAGTAGCTGGGACTACACATGCGTGCCACCACACCTGGCTAATTTTTTTTTTTGTATTTTTAGTGGAGATGGGGTTTCACTATGTTGGCCAGGCTGGTCTCGAACTCCTGACTTTGTGATCTGCCTGCCTCGGCCTCCCAAAGTGCTGGGATTACAGTCGTGAGCCACCGCACCCAGCCGCACCTACTCTTTTGTAAAGCACCTGTGACAATGAAGGACAGATTTATCACCTTGACGATTGTGGTGATGGGGACCTGATCCCAGCAGTCACAGGTCACAGGGGAAGGTCCCTGCTGAAGACAGACCTCAGAAGGGCAGTTGATCCAGGACCCACACCTGCTTTCTTCACGTTTCCTGATCCTGCCCTGGGTCTGCAGTCACAGTTCAGGAAACTTCTCTGGGATCCAAAACTAGGAGGTTCCTCTAGGACCTTATGGCCCTGCCTCCTCCCTGGCCCCTCACAGGACATTTTCTTCCAACAGGTGGAAAAGGAGGGAGCTACTCTAAGGCTGAGTGTAAGTGCGGGGCGGGAGCGTGGAGGAGCTCGCCCACCCTATAATTCCTCCTGCACCACATCTCCTGTGGGCTCTGACCAGGTCTTGTTTTTGTTCTACCCCAGGGAGCGACAGTGCCCAGGGGTCTGAGTCTCACAGCTTGTAAAGGTGAGATTCTGGGGGTCTGAAGTGGGTGGAGGGTGGGGCAGAGGGGACAGGACTGGGTTGTGGGGATTTTTTGATTCAGAATTTTTGAGTGTGTGGTGGGCTGTTCAGAGTGTCATCACTTACCGTGACTGACCTGAATTTGTTCATGACTATTTTCTTCTGTAGCCTGAGACAGCTGCCTTGTGTGCGACTGAGATGCACAGCTGCCTTGTGTGCGACTGAGATGCAGGATTTCCTCACGCCTCCCCTATGTGTCTTAGGGGACTCTGGCTTCTCTTTTTGCAAGGGCCTCTGAATCTGTCTGTGTCCCTGTTAGCACAATGTGAGGAGGTAGAGAAACAGTCCACCTCTGTGTCTACCATGACCCCCTTCCTCACACTGACCTGTGTTCCTTCCCTGTTCTCTTTTCTATTAAAAATAAGAACCTGGGCAGAGTGCGGCAGCTCATGCCTGTAATCCCAGCACTTAGGGAGGCCGAGGAGGGCAGATCACGAGGTCAGGAGATCGAAACCATCCTGGCTAACACGGTGAAACCCCGTCTCTACTAAAAAATACAAAAAATTAGCTGGGCGCAGAGGCACGGGCCTGTAGTCCCAGCTACTCAGGAGGCGGAGGCAGGAGAATGGCGTCAACCCGGGAGGCGGAGGTTGCAGTGAGCCAGGATTGTGCGACTGCACTCCAGCCTGGGTGACAGGGTGAAACGCCATCTCAAAAAATAAAAATT"];
+            let edges = vec![];
+            let query = "AAAAAATACAAAAAATTAGCTGGGCGCAGAGGCACGGGCCTGTAGTCCCAGCTACTCAGGAGGCGGAGGCAGGAGAATGGCGTCAACCCGGGAGGCGGAG";
+
+            let res = AbpoaAligner::create_align_safe(&nodes, &edges, &query);
+            println!("res is: {:?}", res);
         }
     }
 }
