@@ -1,4 +1,4 @@
-use crate::abpoa::{abpoa_add_graph_edge, abpoa_add_graph_node, abpoa_align_sequence_to_graph, abpoa_dump_pog, abpoa_free, abpoa_free_para, abpoa_init, abpoa_init_para, abpoa_msa, abpoa_para_t, abpoa_post_set_para, abpoa_res_t, abpoa_t, free, strdup, ABPOA_CDEL, ABPOA_CDIFF, ABPOA_CHARD_CLIP, ABPOA_CINS, ABPOA_CMATCH, ABPOA_CSOFT_CLIP, ABPOA_SINK_NODE_ID, ABPOA_SRC_NODE_ID, FILE, ABPOA_LOCAL_MODE};
+use crate::abpoa::{abpoa_add_graph_edge, abpoa_add_graph_node, abpoa_align_sequence_to_graph, abpoa_dump_pog, abpoa_free, abpoa_free_para, abpoa_init, abpoa_init_para, abpoa_msa, abpoa_para_t, abpoa_post_set_para, abpoa_res_t, abpoa_t, free, strdup, ABPOA_CDEL, ABPOA_CDIFF, ABPOA_CHARD_CLIP, ABPOA_CINS, ABPOA_CMATCH, ABPOA_CSOFT_CLIP, ABPOA_SINK_NODE_ID, ABPOA_SRC_NODE_ID, FILE, ABPOA_LOCAL_MODE, ABPOA_GLOBAL_MODE};
 //use rayon::prelude::*;
 use std::collections::HashMap;
 use std::ffi::{c_void, CString};
@@ -28,6 +28,11 @@ pub struct AbpoaAligner {
     // cause any issue
     edges: Vec<(usize, usize)>,
     edges_abpoa: Vec<(i32, i32)>,
+}
+
+pub enum AbpoaAlignmentMode {
+    Global,
+    Local
 }
 
 pub struct AbpoaMSA {
@@ -174,7 +179,23 @@ impl AbpoaAligner {
         aligner.set_k(9);
         aligner.set_min_w(10);
         aligner.set_progressive_poa(true);
-        //(*aligner.abpt).align_mode = ABPOA_LOCAL_MODE as c_int;
+        aligner.set_post_para();
+
+        aligner
+    }
+
+    pub unsafe fn new_with_params(w: u8, k: u8, min_w: u8, abpoa_mode: AbpoaAlignmentMode) -> Self {
+        let mut aligner = AbpoaAligner::new();
+
+        aligner.set_w(w);
+        aligner.set_k(k);
+        aligner.set_min_w(min_w);
+
+        match abpoa_mode {
+            AbpoaAlignmentMode::Global => (*aligner.abpt).align_mode = ABPOA_GLOBAL_MODE as c_int,
+            AbpoaAlignmentMode::Local => (*aligner.abpt).align_mode = ABPOA_LOCAL_MODE as c_int,
+        };
+
         aligner.set_post_para();
 
         aligner
@@ -930,9 +951,10 @@ impl AbpoaAligner {
         nodes: &Vec<&str>,
         edges: &Vec<(usize, usize)>,
         query: &str,
+        mode: AbpoaAlignmentMode,
     ) -> AbpoaAlignmentResult {
         // Create the aligner
-        let mut aligner = AbpoaAligner::new_with_example_params();
+        let mut aligner = AbpoaAligner::new_with_params(6,9,10,mode);
 
         // Create the graph
         aligner.add_nodes_edges(nodes, edges);
@@ -1022,7 +1044,7 @@ mod tests {
         // to be run with: (requires rust nightly -- rustup default nighly)
         // RUSTFLAGS="-Z sanitizer=address" cargo test test_create_and_align --target x86_64-unknown-linux-gnu
         unsafe {
-            let result = AbpoaAligner::create_align_safe(&vec!["AAA", "CC"], &vec![(0, 1)], "AACC");
+            let result = AbpoaAligner::create_align_safe(&vec!["AAA", "CC"], &vec![(0, 1)], "AACC",AbpoaAlignmentMode::Global);
         }
     }
 
@@ -1565,7 +1587,7 @@ mod tests {
                 (9, 11),
             ];
 
-            let res = AbpoaAligner::create_align_safe(&nodes, &edges, "AGAAT");
+            let res = AbpoaAligner::create_align_safe(&nodes, &edges, "AGAAT", AbpoaAlignmentMode::Global);
             println!("{:#?}", res.cigar)
         }
     }
@@ -1579,7 +1601,7 @@ mod tests {
 
             let total_node_length: usize = nodes.iter().map(|x| x.len()).sum();
 
-            let res = AbpoaAligner::create_align_safe(&nodes, &edges, &query);
+            let res = AbpoaAligner::create_align_safe(&nodes, &edges, &query, AbpoaAlignmentMode::Global);
             println!("{:#?}", res.cigar_vec);
             //assert_eq!(total_node_length, res.cigar_vec.len())
         }
@@ -1594,7 +1616,7 @@ mod tests {
 
             let total_node_length: usize = nodes.iter().map(|x| x.len()).sum();
 
-            let res = AbpoaAligner::create_align_safe(&nodes, &edges, &query);
+            let res = AbpoaAligner::create_align_safe(&nodes, &edges, &query, AbpoaAlignmentMode::Global);
             println!("{:#?}", res.cigar_vec);
             //assert_eq!(res.cigar_vec.len(), 5)
         }
@@ -1848,7 +1870,7 @@ mod tests {
 
             let total_node_length: usize = nodes.iter().map(|x| x.len()).sum();
 
-            let res = AbpoaAligner::create_align_safe(&nodes, &edges, &query);
+            let res = AbpoaAligner::create_align_safe(&nodes, &edges, &query, AbpoaAlignmentMode::Global);
             assert_eq!(res.aln_start_offset, 1);
             // TODO: fix this
             //assert_eq!(res.aln_end_offset, 1);
@@ -1864,7 +1886,7 @@ mod tests {
 
             let total_node_length: usize = nodes.iter().map(|x| x.len()).sum();
 
-            let res = AbpoaAligner::create_align_safe(&nodes, &edges, &query);
+            let res = AbpoaAligner::create_align_safe(&nodes, &edges, &query, AbpoaAlignmentMode::Global);
             assert_eq!(res.aln_start_offset, 3);
             assert_eq!(res.aln_end_offset, 9);
         }
@@ -1877,7 +1899,7 @@ mod tests {
             let edges = vec![];
             let query = "AAAAAATACAAAAAATTAGCTGGGCGCAGAGGCACGGGCCTGTAGTCCCAGCTACTCAGGAGGCGGAGGCAGGAGAATGGCGTCAACCCGGGAGGCGGAG";
 
-            let res = AbpoaAligner::create_align_safe(&nodes, &edges, &query);
+            let res = AbpoaAligner::create_align_safe(&nodes, &edges, &query, AbpoaAlignmentMode::Global);
             println!("res is: {:?}", res);
         }
     }
